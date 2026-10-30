@@ -172,7 +172,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     private void updateViewport(int w, int h) {
         if (w <= 0 || h <= 0) return;
-        // Scala orizzontalmente edge-to-edge a 540 coordinate virtuali
         viewScale = (float) w / Game.W;
         virtualH = (float) h / viewScale;
         offsetX = 0f;
@@ -183,7 +182,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void updateDynamicLayout(float vH) {
-        // Pulsanti inferiori fissati a filo del fondo dello schermo (ergonomia pollice)
         float btnTop = vH - 105f;
         float btnBottom = vH - 25f;
 
@@ -195,7 +193,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         btnTurret.set(175f, btnTop, 325f, btnBottom);
         btnStartWave.set(335f, btnTop, 525f, btnBottom);
 
-        // Finestre modali centrate dinamicamente rispetto all'altezza effettiva del dispositivo
         float midY = vH / 2f;
         cardUpgrade1.set(30f, midY - 265f, 510f, midY - 115f);
         cardUpgrade2.set(30f, midY - 95f, 510f, midY + 55f);
@@ -531,7 +528,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     // ==========================================
-    // RENDERING FANTASY NANICO 100% FULLSCREEN
+    // RENDERING FANTASY NANICO 100% VISUALE
     // ==========================================
 
     private void drawGame(Canvas canvas, float dt) {
@@ -577,12 +574,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         // Trincea difensiva dei Nani (Palizzata)
         drawDwarvenTrench(canvas);
 
-        // Giacimenti minerari: Vene di ferro grezzo nella roccia viva
+        // Giacimenti minerari: Vene di roccia, cristalli e picconi incrociati
         for (int i = 0; i < game.mines.size(); i++) {
             drawOreVein(canvas, game.mines.get(i), i);
         }
 
-        // Edifici: Fucina nanica, Tesoreria, Mura e Baliste
+        // Edifici: Forgia con incudine, Forziere ricolmo di tesori, Mura e Baliste
         for (Game.Building b : game.buildings) {
             drawBuilding(canvas, b);
         }
@@ -622,7 +619,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         // Particelle (Scintille di forgia, schegge rocciose)
         drawParticles(canvas);
 
-        // Testo fluttuante (danno, estrazione, fusione)
+        // Testo fluttuante (transitorio da impatto: danno, estrazione, fusione)
         drawEffects(canvas);
 
         // HUD fantasy: Stendardo di ferro e legno, stemmi scudo, pergamena
@@ -655,11 +652,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintStroke.setColor(0x66D97706);
         paintStroke.setStrokeWidth(1.5f);
         canvas.drawRect(16f, 220f, Game.W - 16f, maxGridY, paintStroke);
-
-        paintText.setTextSize(11f);
-        paintText.setColor(0xFFFBBF24);
-        paintText.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("⚒ CANTIERE DEI NANI (Edifica mura e baliste con il ferro)", 24f, 238f, paintText);
     }
 
     private void drawMinePerimeter(Canvas canvas) {
@@ -693,7 +685,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private void drawDwarvenTrench(Canvas canvas) {
         float defenseY = virtualH - 200f;
 
-        // Palizzata e trincea di difesa nanica
+        // Palizzata e trincea difensiva dei Nani
         paintStroke.setStyle(Paint.Style.STROKE);
         paintStroke.setStrokeWidth(2.5f);
         paintStroke.setColor(0xFFB91C1C);
@@ -705,96 +697,214 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         for (float x = 20f; x < Game.W - 20f; x += 22f) {
             rockPath.reset();
             rockPath.moveTo(x - 5f, defenseY + 4f);
-            rockPath.lineTo(x, defenseY - 6f);
+            rockPath.lineTo(x, defenseY - 7f);
             rockPath.lineTo(x + 5f, defenseY + 4f);
             rockPath.close();
             canvas.drawPath(rockPath, paintFill);
         }
-
-        paintText.setTextSize(9f);
-        paintText.setColor(0xFFDC2626);
-        paintText.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("BARRICATA DELLA FORTEZZA NANICA", Game.W / 2f, defenseY - 10f, paintText);
     }
 
     private void drawOreVein(Canvas canvas, Game.Mine m, int index) {
         boolean flash = (game.elapsed - game.hits.getOrDefault("mine" + index, -10f)) < 0.18f;
 
+        // Roccia viva montuosa frastagliata
         rockPath.reset();
-        rockPath.moveTo(m.x + 6f, m.y);
-        rockPath.lineTo(m.x + m.w - 10f, m.y + 3f);
+        rockPath.moveTo(m.x + 8f, m.y);
+        rockPath.lineTo(m.x + m.w - 12f, m.y + 4f);
         rockPath.lineTo(m.x + m.w, m.y + 16f);
-        rockPath.lineTo(m.x + m.w - 8f, m.y + m.h - 4f);
-        rockPath.lineTo(m.x + m.w - 26f, m.y + m.h);
-        rockPath.lineTo(m.x + 10f, m.y + m.h - 2f);
-        rockPath.lineTo(m.x, m.y + m.h - 12f);
-        rockPath.lineTo(m.x + 3f, m.y + 10f);
+        rockPath.lineTo(m.x + m.w - 10f, m.y + m.h - 4f);
+        rockPath.lineTo(m.x + m.w - 30f, m.y + m.h);
+        rockPath.lineTo(m.x + 12f, m.y + m.h - 2f);
+        rockPath.lineTo(m.x, m.y + m.h - 14f);
+        rockPath.lineTo(m.x + 4f, m.y + 12f);
         rockPath.close();
 
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(flash ? 0xFFF59E0B : 0xFF382C26);
+        paintFill.setColor(flash ? 0xFFF59E0B : 0xFF2D241E);
         canvas.drawPath(rockPath, paintFill);
 
         paintStroke.setStyle(Paint.Style.STROKE);
         paintStroke.setStrokeWidth(2f);
-        paintStroke.setColor(flash ? 0xFFFEF3C7 : 0xFF5C4A42);
+        paintStroke.setColor(flash ? 0xFFFEF3C7 : 0xFF4D3B32);
         canvas.drawPath(rockPath, paintStroke);
 
+        // Crepe nella roccia viva
+        paintStroke.setStrokeWidth(1.2f);
+        paintStroke.setColor(0xFF1F1814);
+        canvas.drawLine(m.x + 15f, m.y + 8f, m.x + 35f, m.y + 22f, paintStroke);
+        canvas.drawLine(m.x + m.w - 20f, m.y + 10f, m.x + m.w - 40f, m.y + 28f, paintStroke);
+
+        // Vene minerarie luminose con cristalli
         float pulse = (float) (Math.sin(game.elapsed * 4f + index) * 0.35 + 0.65);
-        paintStroke.setColor(flash ? 0xFFFFFFFF : Color.argb((int) (230 * pulse), 245, 158, 11));
+        paintStroke.setColor(flash ? 0xFFFFFFFF : Color.argb((int) (240 * pulse), 245, 158, 11));
         paintStroke.setStrokeWidth(2.5f);
 
-        canvas.drawLine(m.x + 18f, m.y + 12f, m.x + 50f, m.y + 24f, paintStroke);
-        canvas.drawLine(m.x + 50f, m.y + 24f, m.x + 75f, m.y + 15f, paintStroke);
-        canvas.drawLine(m.x + 75f, m.y + 15f, m.x + 110f, m.y + 30f, paintStroke);
+        canvas.drawLine(m.x + 22f, m.y + 14f, m.x + 48f, m.y + 26f, paintStroke);
+        canvas.drawLine(m.x + 48f, m.y + 26f, m.x + 72f, m.y + 16f, paintStroke);
+        canvas.drawLine(m.x + 72f, m.y + 16f, m.x + 108f, m.y + 30f, paintStroke);
 
-        paintFill.setColor(Color.argb((int) (240 * pulse), 253, 224, 71));
-        canvas.drawCircle(m.x + 32f, m.y + 16f, 3.5f, paintFill);
-        canvas.drawCircle(m.x + 68f, m.y + 22f, 4f, paintFill);
-        canvas.drawCircle(m.x + 94f, m.y + 24f, 3.5f, paintFill);
+        // Cristalli poligonali sfaccettati
+        paintFill.setColor(Color.argb((int) (245 * pulse), 253, 224, 71));
+        drawFacetedGem(canvas, m.x + 30f, m.y + 18f, 5.5f);
+        drawFacetedGem(canvas, m.x + 58f, m.y + 22f, 6.5f);
+        drawFacetedGem(canvas, m.x + 90f, m.y + 18f, 5.5f);
+        drawFacetedGem(canvas, m.x + 104f, m.y + 28f, 4.5f);
 
-        paintText.setTextSize(10f);
-        paintText.setColor(0xFFFDE68A);
-        paintText.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("MINIERA DI FERRO", m.x + m.w / 2f, m.y + m.h / 2f + 4f, paintText);
+        // Icona visiva centrale: Picconi da minatore incrociati
+        float cx = m.x + m.w / 2f;
+        float cy = m.y + m.h / 2f + 1f;
+
+        paintStroke.setStrokeWidth(2f);
+        paintStroke.setColor(0xFF78350F);
+        canvas.drawLine(cx - 12f, cy + 10f, cx + 12f, cy - 10f, paintStroke);
+        canvas.drawLine(cx + 12f, cy + 10f, cx - 12f, cy - 10f, paintStroke);
+
+        paintStroke.setStrokeWidth(2.5f);
+        paintStroke.setColor(0xFFE7E5E4);
+        canvas.drawLine(cx + 7f, cy - 13f, cx + 15f, cy - 7f, paintStroke);
+        canvas.drawLine(cx - 7f, cy - 13f, cx - 15f, cy - 7f, paintStroke);
+    }
+
+    private void drawFacetedGem(Canvas canvas, float gx, float gy, float r) {
+        rockPath.reset();
+        rockPath.moveTo(gx, gy - r);
+        rockPath.lineTo(gx + r, gy - r * 0.3f);
+        rockPath.lineTo(gx + r * 0.7f, gy + r);
+        rockPath.lineTo(gx - r * 0.7f, gy + r);
+        rockPath.lineTo(gx - r, gy - r * 0.3f);
+        rockPath.close();
+        canvas.drawPath(rockPath, paintFill);
+        paintStroke.setStyle(Paint.Style.STROKE);
+        paintStroke.setStrokeWidth(1f);
+        paintStroke.setColor(0xFFFEF08A);
+        canvas.drawPath(rockPath, paintStroke);
+        paintFill.setStyle(Paint.Style.FILL);
     }
 
     private void drawBuilding(Canvas canvas, Game.Building b) {
         tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
 
         if ("wall".equals(b.type)) {
+            // Muro in pietra massiccia con mattoni e merlature
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF44403C);
-            canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
+            paintFill.setColor(0xFF383532);
+            canvas.drawRoundRect(tempRect, 3f, 3f, paintFill);
 
-            paintFill.setColor(0xFF292524);
-            for (float mx = b.x + 4f; mx < b.x + b.w - 10f; mx += 24f) {
-                canvas.drawRect(mx, b.y, mx + 12f, b.y + 6f, paintFill);
+            // Trama a mattoni squadrati (ashlar blocks)
+            paintStroke.setStyle(Paint.Style.STROKE);
+            paintStroke.setStrokeWidth(1.2f);
+            paintStroke.setColor(0xFF201D1A);
+            float rowH = b.h / 2f;
+            canvas.drawLine(b.x, b.y + rowH, b.x + b.w, b.y + rowH, paintStroke);
+            for (float mx = b.x + 20f; mx < b.x + b.w - 5f; mx += 26f) {
+                canvas.drawLine(mx, b.y, mx, b.y + rowH, paintStroke);
+                canvas.drawLine(mx - 13f, b.y + rowH, mx - 13f, b.y + b.h, paintStroke);
             }
 
-            paintStroke.setStyle(Paint.Style.STROKE);
-            paintStroke.setStrokeWidth(2f);
-            paintStroke.setColor(0xFF78716C);
-            canvas.drawRoundRect(tempRect, 4f, 4f, paintStroke);
+            // Merlatura superiore
+            paintFill.setColor(0xFF262320);
+            for (float mx = b.x + 4f; mx < b.x + b.w - 10f; mx += 20f) {
+                canvas.drawRect(mx, b.y, mx + 10f, b.y + 4.5f, paintFill);
+            }
 
-            paintText.setTextSize(10f);
-            paintText.setColor(0xFFE7E5E4);
-            paintText.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText("MURA NANICHE (SPONDA)", b.x + b.w / 2f, b.y + b.h / 2f + 4f, paintText);
+            // Rinforzi e angolari in ferro borchiato
+            paintStroke.setColor(0xFF78716C);
+            paintStroke.setStrokeWidth(1.8f);
+            canvas.drawRoundRect(tempRect, 3f, 3f, paintStroke);
+
+            // Icona distintiva: scudo araldico nanico centrale in ferro e ottone
+            float cx = b.x + b.w / 2f;
+            float cy = b.y + b.h / 2f;
+            paintFill.setColor(0xFFF59E0B);
+            rockPath.reset();
+            rockPath.moveTo(cx - 7f, cy - 6f);
+            rockPath.lineTo(cx + 7f, cy - 6f);
+            rockPath.lineTo(cx + 7f, cy);
+            rockPath.lineTo(cx, cy + 7f);
+            rockPath.lineTo(cx - 7f, cy);
+            rockPath.close();
+            canvas.drawPath(rockPath, paintFill);
+            paintFill.setColor(0xFF78350F);
+            canvas.drawCircle(cx, cy - 1f, 2.5f, paintFill);
 
         } else if ("forge".equals(b.type)) {
+            // Struttura della fucina in pietra vulcanica scura
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF291B16);
+            paintFill.setColor(0xFF1C1917);
             canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
 
-            tempRect.set(b.x + 8f, b.y + 10f, b.x + b.w - 8f, b.y + b.h - 8f);
+            // Due comignoli / camini sul tetto della forgia
+            paintFill.setColor(0xFF292524);
+            canvas.drawRect(b.x + 18f, b.y - 7f, b.x + 32f, b.y, paintFill);
+            canvas.drawRect(b.x + b.w - 32f, b.y - 7f, b.x + b.w - 18f, b.y, paintFill);
             if (game.forgeOpen) {
-                paintFill.setShader(new LinearGradient(b.x, b.y, b.x, b.y + b.h, 0xFFFF3300, 0xFFFFCC00, Shader.TileMode.CLAMP));
+                paintFill.setColor(0xFFFF7A00);
+                canvas.drawCircle(b.x + 25f, b.y - 8f, 2.5f, paintFill);
+                canvas.drawCircle(b.x + b.w - 25f, b.y - 8f, 2.5f, paintFill);
+            }
+
+            // Bocca centrale della fucina
+            tempRect.set(b.x + 10f, b.y + 10f, b.x + b.w - 10f, b.y + b.h - 8f);
+
+            if (game.forgeOpen) {
+                // FORGIA APERTA: Fuoco incandescente con sagoma dell'incudine e martello
+                paintFill.setShader(new LinearGradient(b.x, b.y + 10f, b.x, b.y + b.h,
+                        0xFFFF3300, 0xFFFFCC00, Shader.TileMode.CLAMP));
                 canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
                 paintFill.setShader(null);
+
+                float cx = b.x + b.w / 2f;
+                float cy = b.y + b.h / 2f + 2f;
+                paintFill.setColor(0xFF140F0D); // Sagoma incudine
+                canvas.drawRect(cx - 16f, cy + 6f, cx + 16f, cy + 12f, paintFill);
+                canvas.drawRect(cx - 10f, cy, cx + 10f, cy + 6f, paintFill);
+                canvas.drawRect(cx - 14f, cy - 6f, cx + 12f, cy, paintFill);
+                rockPath.reset();
+                rockPath.moveTo(cx + 12f, cy - 6f);
+                rockPath.lineTo(cx + 22f, cy - 2f);
+                rockPath.lineTo(cx + 12f, cy);
+                rockPath.close();
+                canvas.drawPath(rockPath, paintFill);
+
+                // Martello del fabbro poggiato sopra l'incudine
+                paintStroke.setColor(0xFFF59E0B);
+                paintStroke.setStrokeWidth(2f);
+                canvas.drawLine(cx - 10f, cy - 8f, cx - 2f, cy - 14f, paintStroke);
+                paintFill.setColor(0xFFD6D3D1);
+                canvas.drawRect(cx - 14f, cy - 11f, cx - 8f, cy - 6f, paintFill);
+
+                // Indicatori di flusso ore -> ferro
+                float anim = (game.elapsed * 40f) % 24f;
+                paintStroke.setColor(0x80FFFFFF);
+                paintStroke.setStrokeWidth(2f);
+                canvas.drawLine(b.x + 18f + anim, b.y + b.h / 2f - 4f, b.x + 24f + anim, b.y + b.h / 2f, paintStroke);
+                canvas.drawLine(b.x + 24f + anim, b.y + b.h / 2f, b.x + 18f + anim, b.y + b.h / 2f + 4f, paintStroke);
+                canvas.drawLine(b.x + b.w - 18f - anim, b.y + b.h / 2f - 4f, b.x - 24f - anim + b.w, b.y + b.h / 2f, paintStroke);
+                canvas.drawLine(b.x + b.w - 24f - anim, b.y + b.h / 2f, b.x - 18f - anim + b.w, b.y + b.h / 2f + 4f, paintStroke);
+
             } else {
-                paintFill.setColor(0xFF57382B);
+                // FORGIA CHIUSA: Portone massiccio di quercia barricato con traverse e lucchetto di ferro
+                paintFill.setColor(0xFF452213);
                 canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
+
+                paintStroke.setColor(0xFF2C160C);
+                paintStroke.setStrokeWidth(1.5f);
+                for (float vx = b.x + 22f; vx < b.x + b.w - 15f; vx += 18f) {
+                    canvas.drawLine(vx, b.y + 10f, vx, b.y + b.h - 8f, paintStroke);
+                }
+
+                paintStroke.setColor(0xFF292524);
+                paintStroke.setStrokeWidth(3f);
+                canvas.drawLine(b.x + 14f, b.y + 12f, b.x + b.w - 14f, b.y + b.h - 10f, paintStroke);
+                canvas.drawLine(b.x + 14f, b.y + b.h - 10f, b.x + b.w - 14f, b.y + 12f, paintStroke);
+
+                float cx = b.x + b.w / 2f;
+                float cy = b.y + b.h / 2f;
+                paintStroke.setColor(0xFF78716C);
+                paintStroke.setStrokeWidth(2.5f);
+                canvas.drawCircle(cx, cy, 7f, paintStroke);
+                paintFill.setColor(0xFF1C1917);
+                canvas.drawRect(cx - 5f, cy + 3f, cx + 5f, cy + 12f, paintFill);
             }
 
             tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
@@ -810,51 +920,81 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             canvas.drawCircle(b.x + 5f, b.y + b.h - 5f, 2f, paintFill);
             canvas.drawCircle(b.x + b.w - 5f, b.y + b.h - 5f, 2f, paintFill);
 
-            paintText.setTextSize(11f);
-            paintText.setTextAlign(Paint.Align.CENTER);
-            if (game.forgeOpen) {
-                paintText.setColor(0xFFFFFFFF);
-                canvas.drawText("🔥 FORGIA ACCESA ➔ [FONDE IN FERRO]", b.x + b.w / 2f, b.y + b.h / 2f + 4f, paintText);
-            } else {
-                paintText.setColor(0xFFF5F5F4);
-                canvas.drawText("PORTONE CHIUSO (SPONDA SOLIDA)", b.x + b.w / 2f, b.y + b.h / 2f + 4f, paintText);
-            }
-
         } else if ("depot".equals(b.type)) {
+            // Forziere reale nanico inconfondibile
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF451A03);
-            canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+            paintFill.setColor(0xFF3B1A0A);
+            canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
 
-            paintFill.setColor(0xFF292524);
-            canvas.drawRect(b.x + 14f, b.y, b.x + 22f, b.y + b.h, paintFill);
-            canvas.drawRect(b.x + b.w - 22f, b.y, b.x + b.w - 14f, b.y + b.h, paintFill);
+            // Coperchio curvo bombato
+            paintFill.setColor(0xFF4D2411);
+            canvas.drawRoundRect(b.x, b.y, b.x + b.w, b.y + 18f, 6f, 6f, paintFill);
+
+            // Fasce corazzate in ferro battuto
+            paintFill.setColor(0xFF262320);
+            canvas.drawRect(b.x + 16f, b.y, b.x + 28f, b.y + b.h, paintFill);
+            canvas.drawRect(b.x + b.w - 28f, b.y, b.x + b.w - 16f, b.y + b.h, paintFill);
+            canvas.drawRect(b.x + b.w / 2f - 6f, b.y, b.x + b.w / 2f + 6f, b.y + b.h, paintFill);
+
+            // Borchie d'oro sulle fasce
+            paintFill.setColor(0xFFFBBF24);
+            canvas.drawCircle(b.x + 22f, b.y + 8f, 2.5f, paintFill);
+            canvas.drawCircle(b.x + 22f, b.y + b.h - 10f, 2.5f, paintFill);
+            canvas.drawCircle(b.x + b.w - 22f, b.y + 8f, 2.5f, paintFill);
+            canvas.drawCircle(b.x + b.w - 22f, b.y + b.h - 10f, 2.5f, paintFill);
 
             paintStroke.setStyle(Paint.Style.STROKE);
             paintStroke.setStrokeWidth(2f);
             paintStroke.setColor(0xFFF59E0B);
-            canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
+            canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
 
+            float cx = b.x + b.w / 2f;
+            float cy = b.y + b.h / 2f + 4f;
+
+            // Lingotti d'oro e ferro forgiato all'interno
             paintFill.setColor(0xFFFBBF24);
-            canvas.drawCircle(b.x + b.w / 2f, b.y + b.h / 2f - 4f, 5f, paintFill);
-            canvas.drawRect(b.x + b.w / 2f - 2f, b.y + b.h / 2f - 4f, b.x + b.w / 2f + 2f, b.y + b.h / 2f + 7f, paintFill);
+            canvas.drawRect(cx - 36f, cy - 2f, cx - 14f, cy + 7f, paintFill);
+            paintFill.setColor(0xFFD6D3D1);
+            canvas.drawRect(cx + 14f, cy - 2f, cx + 36f, cy + 7f, paintFill);
 
-            paintText.setTextSize(11f);
-            paintText.setColor(0xFFFEF3C7);
-            paintText.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText("FORZIERE REALE (INCASSA FERRO)", b.x + b.w / 2f, b.y + b.h / 2f + 16f, paintText);
+            // Monete d'oro luccicanti
+            paintFill.setColor(0xFFFDE047);
+            canvas.drawCircle(cx - 26f, cy - 5f, 4f, paintFill);
+            canvas.drawCircle(cx - 18f, cy - 4f, 3.5f, paintFill);
+            canvas.drawCircle(cx + 22f, cy - 5f, 4f, paintFill);
+            canvas.drawCircle(cx + 30f, cy - 4f, 3.5f, paintFill);
+
+            // Serratura centrale dorata
+            paintFill.setColor(0xFFF59E0B);
+            canvas.drawCircle(cx, cy - 2f, 7f, paintFill);
+            paintFill.setColor(0xFF140C08);
+            canvas.drawCircle(cx, cy - 4f, 2.5f, paintFill);
+            canvas.drawRect(cx - 1.5f, cy - 4f, cx + 1.5f, cy + 3f, paintFill);
+
+            // Frecce animate dorate sopra il forziere (indicano deposito)
+            float anim = (game.elapsed * 35f) % 18f;
+            paintStroke.setColor(0x80FDE047);
+            paintStroke.setStrokeWidth(2f);
+            canvas.drawLine(cx - 8f, b.y + 4f + anim, cx, b.y + 11f + anim, paintStroke);
+            canvas.drawLine(cx, b.y + 11f + anim, cx + 8f, b.y + 4f + anim, paintStroke);
 
         } else if ("turret".equals(b.type)) {
+            // Balista a ripetizione rotante montata su affusto in pietra
+            float cx = b.x + b.w / 2f;
+            float cy = b.y + b.h / 2f;
+
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF3B2F2F);
-            canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+            paintFill.setColor(0xFF292524);
+            canvas.drawCircle(cx, cy, 22f, paintFill);
 
             paintStroke.setStyle(Paint.Style.STROKE);
             paintStroke.setStrokeWidth(2f);
-            paintStroke.setColor(0xFFD97706);
-            canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
+            paintStroke.setColor(0xFF78716C);
+            canvas.drawCircle(cx, cy, 22f, paintStroke);
 
-            float cx = b.x + b.w / 2f;
-            float cy = b.y + b.h / 2f;
+            paintStroke.setStrokeWidth(1f);
+            paintStroke.setColor(0x80F59E0B);
+            canvas.drawCircle(cx, cy, 17f, paintStroke);
 
             Game.Enemy target = null;
             double minDist = 300.0;
@@ -873,19 +1013,38 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             canvas.translate(cx, cy);
             canvas.rotate((float) Math.toDegrees(angle));
 
+            // Fusto in legno
             paintFill.setColor(0xFF78350F);
-            canvas.drawRect(-4f, -3f, 16f, 3f, paintFill);
+            canvas.drawRect(-8f, -4f, 18f, 4f, paintFill);
+
+            // Arco metallico
             paintStroke.setColor(0xFFD6D3D1);
-            paintStroke.setStrokeWidth(2f);
-            canvas.drawLine(10f, -12f, 14f, 0f, paintStroke);
-            canvas.drawLine(14f, 0f, 10f, 12f, paintStroke);
+            paintStroke.setStrokeWidth(3f);
+            canvas.drawLine(10f, -18f, 16f, 0f, paintStroke);
+            canvas.drawLine(16f, 0f, 10f, 18f, paintStroke);
+
+            // Corda della balista
+            paintStroke.setColor(0xFFFEF3C7);
+            paintStroke.setStrokeWidth(1.2f);
+            canvas.drawLine(10f, -18f, -4f, 0f, paintStroke);
+            canvas.drawLine(-4f, 0f, 10f, 18f, paintStroke);
+
+            // Dardo pronto
+            paintStroke.setColor(0xFFF59E0B);
+            paintStroke.setStrokeWidth(2.2f);
+            canvas.drawLine(-2f, 0f, 22f, 0f, paintStroke);
+            paintFill.setColor(0xFFE7E5E4);
+            canvas.drawCircle(22f, 0f, 3f, paintFill);
+
+            paintStroke.setColor(0xFFDC2626);
+            paintStroke.setStrokeWidth(1.5f);
+            canvas.drawLine(-2f, -3f, 2f, 0f, paintStroke);
+            canvas.drawLine(-2f, 3f, 2f, 0f, paintStroke);
+
+            paintFill.setColor(0xFFF59E0B);
+            canvas.drawCircle(0f, 0f, 4.5f, paintFill);
 
             canvas.restore();
-
-            paintText.setTextSize(9f);
-            paintText.setColor(0xFFFDE68A);
-            paintText.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText("BALISTA", cx, b.y + b.h + 12f, paintText);
         }
     }
 
@@ -1101,7 +1260,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawHUD(Canvas canvas) {
-        // Trave portante superiore a filo bordo schermo
         paintFill.setStyle(Paint.Style.FILL);
         paintFill.setShader(new LinearGradient(0f, 0f, 0f, 65f, 0xFA24150F, 0xEE140C09, Shader.TileMode.CLAMP));
         canvas.drawRect(0f, 0f, Game.W, 65f, paintFill);
@@ -1180,7 +1338,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         if ("wave".equals(game.phase)) {
             drawFantasyButton(canvas, btnForge,
                     game.forgeOpen ? "FUCINA: APERTA" : "FUCINA: CHIUSA",
-                    game.forgeOpen ? "Fonde il Minerale" : "Muro Riflettente",
+                    game.forgeOpen ? "Fonde il Minerale" : "Portone Riflettente",
                     game.forgeOpen ? 0xFFC2410C : 0xFF44403C,
                     game.forgeOpen ? 0xFFFFEDD5 : 0xFFD6D3D1);
 
