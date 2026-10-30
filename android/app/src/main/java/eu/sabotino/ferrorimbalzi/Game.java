@@ -81,6 +81,13 @@ public class Game {
         public int recalls = 0;
     }
 
+    // Hub dell'Avamposto e Selezione Spedizioni (Progressione Basi)
+    public String screen = "hub"; // "hub" (Avamposto) oppure "game" (Spedizione)
+    public String selectedBiome = "mine_iron"; // "mine_iron", "forest_wood"
+    public int clanIron = 0; // Riserve complessive del Clan all'Avamposto
+    public int clanWood = 0; // Riserve di legname
+    public boolean forestUnlocked = false;
+
     public String phase = "build"; // build, wave, upgrade, won, short, lost
     public int wave = 0;
     public int maxWaves = 5;
@@ -121,16 +128,55 @@ public class Game {
 
     public void initDefaultWorld() {
         buildings.clear();
-        // Fonderia a sinistra, Deposito a destra, sponda protettiva sul lato destro
-        buildings.add(new Building("forge", "forge", 35f, 430f, 140f, 60f));
-        buildings.add(new Building("depot", "depot", 365f, 430f, 140f, 60f));
-        buildings.add(new Building("wall0", "wall", 395f, 260f, 110f, 22f));
+        // Fonderia e Deposito con aspect ratio 1.50 (120x80) proporzionati allo sprite (192x128)
+        buildings.add(new Building("forge", "forge", 35f, 400f, 120f, 80f));
+        buildings.add(new Building("depot", "depot", 385f, 400f, 120f, 80f));
+        buildings.add(new Building("wall0", "wall", 395f, 260f, 110f, 24f));
 
         mines.clear();
         // 3 Giacimenti nel settore minerario superiore
-        mines.add(new Mine(35f, 95f, 130f, 44f));
-        mines.add(new Mine(205f, 80f, 130f, 44f));
-        mines.add(new Mine(375f, 95f, 130f, 44f));
+        mines.add(new Mine(35f, 95f, 130f, 50f));
+        mines.add(new Mine(205f, 80f, 130f, 50f));
+        mines.add(new Mine(375f, 95f, 130f, 50f));
+    }
+
+    public void startExpedition(String biome) {
+        this.selectedBiome = biome;
+        this.screen = "game";
+        this.wave = 0;
+        this.time = 0f;
+        this.phase = "build";
+        this.iron = 6;
+        this.delivered = 0;
+        this.hp = maxHp;
+        this.kills = 0;
+        this.ball.held = true;
+        this.ball.x = paddle.x;
+        this.ball.y = paddle.y - 20f;
+        this.ball.vx = 0f;
+        this.ball.vy = 0f;
+        this.ball.ore = 0;
+        this.ball.metal = 0;
+        this.enemies.clear();
+        this.shots.clear();
+        this.effects.clear();
+        initDefaultWorld();
+    }
+
+    public void returnToHub() {
+        this.clanIron += this.delivered;
+        this.screen = "hub";
+        this.phase = "build";
+        this.ball.held = true;
+    }
+
+    public boolean unlockForest() {
+        if (clanIron >= 14 && !forestUnlocked) {
+            clanIron -= 14;
+            forestUnlocked = true;
+            return true;
+        }
+        return false;
     }
 
     public void setVirtualHeight(float newH) {

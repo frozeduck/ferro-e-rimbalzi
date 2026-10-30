@@ -13,8 +13,9 @@ public class GameTest {
         testLeOndateConsentonoTalentiCostruzioneEConclusione();
         testIlTempoScadutoFaPagareINemiciZeroIntegritaTermina();
         testSpedizioneCompletaEVincibileUsandoSoltantoTiriRichiamiERacchetta();
+        testHubESelezioneSpedizione();
 
-        System.out.println("TUTTI I 9 TEST PASSATI CON SUCCESSO SUL NUOVO MODELLO VERTICALE! (9/9)");
+        System.out.println("TUTTI I 10 TEST PASSATI CON SUCCESSO SUL NUOVO MODELLO VERTICALE! (10/10)");
     }
 
     private static void assertEquals(Object actual, Object expected, String message) {
@@ -220,5 +221,32 @@ public class GameTest {
         assertTrue(s.stats.mined >= s.delivered, "Minerale estratto coerente con consegne");
         assertTrue(s.hp > 0, "Nucleo della città ancora integro");
         System.out.println("✔ Una spedizione completa è vincibile usando soltanto tiri, richiami e racchetta");
+    }
+
+    public static void testHubESelezioneSpedizione() {
+        Game s = new Game();
+        assertEquals(s.screen, "hub", "Schermata iniziale deve essere l'Avamposto Hub");
+        assertEquals(s.selectedBiome, "mine_iron", "Bioma iniziale di default è la Miniera di Ferro");
+        assertEquals(s.clanIron, 0, "Riserve iniziali del clan vuote");
+        assertTrue(!s.forestUnlocked, "Bosco dei Nani inizialmente bloccato");
+
+        // Avvio spedizione miniera
+        s.startExpedition("mine_iron");
+        assertEquals(s.screen, "game", "Schermata passa a game");
+        assertEquals(s.phase, "build", "Fase iniziale cantiere");
+
+        // Simula consegna ferro
+        s.delivered = 16;
+        s.returnToHub();
+        assertEquals(s.screen, "hub", "Ritorno all'Avamposto Hub");
+        assertEquals(s.clanIron, 16, "Ferro consegnato accreditato al clan (16)");
+
+        // Sblocco Bosco dei Nani (costo 14 Fe)
+        boolean unlocked = s.unlockForest();
+        assertTrue(unlocked, "Bosco sbloccato con successo");
+        assertTrue(s.forestUnlocked, "Flag forestUnlocked impostato a true");
+        assertEquals(s.clanIron, 2, "Residuo ferro del clan coerente (16 - 14 = 2)");
+
+        System.out.println("✔ L'Avamposto gestisce correttamente riserve, spedizioni e sblocco biomi");
     }
 }

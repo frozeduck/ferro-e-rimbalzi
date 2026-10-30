@@ -108,9 +108,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private final RectF cardUpgrade2 = new RectF(30f, 380f, 510f, 530f);
     private final RectF cardUpgrade3 = new RectF(30f, 550f, 510f, 700f);
 
+    // Hub dell'Avamposto Nanico e Selezione Spedizioni
+    private final RectF cardMineIron = new RectF(25f, 190f, 515f, 340f);
+    private final RectF cardForestWood = new RectF(25f, 360f, 515f, 510f);
+    private final RectF btnStartExpedition = new RectF(50f, 550f, 490f, 630f);
+    private final RectF btnReturnHub = new RectF(150f, 650f, 390f, 715f);
+
     // Pulsanti finestra modale
     private final RectF btnResume = new RectF(150f, 480f, 390f, 545f);
-    private final RectF btnRestart = new RectF(150f, 565f, 390f, 630f);
+    private final RectF btnRestart = new RectF(150f, 730f, 390f, 795f);
+    private final RectF btnPauseRestart = new RectF(150f, 565f, 390f, 630f);
 
     public GameView(Context context) {
         super(context);
@@ -431,6 +438,28 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void handleTouchDown(float tx, float ty) {
+        if ("hub".equals(game.screen)) {
+            if (cardMineIron.contains(tx, ty)) {
+                game.selectedBiome = "mine_iron";
+                AudioHelper.playAnvil();
+            } else if (cardForestWood.contains(tx, ty)) {
+                if (game.forestUnlocked) {
+                    game.selectedBiome = "forest_wood";
+                    AudioHelper.playAnvil();
+                } else if (game.clanIron >= 14) {
+                    game.unlockForest();
+                    game.selectedBiome = "forest_wood";
+                    AudioHelper.playWarhorn();
+                } else {
+                    AudioHelper.playAnvil();
+                }
+            } else if (btnStartExpedition.contains(tx, ty)) {
+                game.startExpedition(game.selectedBiome);
+                AudioHelper.playWarhorn();
+            }
+            return;
+        }
+
         if (showTutorial) {
             if (btnTutorialClose.contains(tx, ty)) {
                 showTutorial = false;
@@ -455,7 +484,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if (btnResume.contains(tx, ty)) {
                 paused = false;
                 AudioHelper.playAnvil();
-            } else if (btnRestart.contains(tx, ty)) {
+            } else if (btnPauseRestart.contains(tx, ty)) {
                 resetGame();
                 AudioHelper.playAnvil();
             }
@@ -480,7 +509,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         }
 
         if ("won".equals(game.phase) || "short".equals(game.phase) || "lost".equals(game.phase)) {
-            if (btnRestart.contains(tx, ty)) {
+            if (btnReturnHub.contains(tx, ty)) {
+                game.returnToHub();
+                AudioHelper.playAnvil();
+            } else if (btnRestart.contains(tx, ty)) {
                 resetGame();
                 AudioHelper.playAnvil();
             }
@@ -652,6 +684,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             canvas.drawCircle(s.x, s.y, s.size, paintFill);
         }
 
+        if ("hub".equals(game.screen)) {
+            drawHub(canvas);
+            canvas.restore();
+            return;
+        }
+
         // Griglia di costruzione: Cantiere di scalpellatura nanica
         if ("build".equals(game.phase)) {
             drawMasonryGrid(canvas);
@@ -795,11 +833,28 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         }
     }
 
-    private void drawOreVein(Canvas canvas, Game.Mine m, int index) {
-        tempRect.set(m.x, m.y, m.x + m.w, m.y + m.h);
-        if (bmpMine != null) {
-            canvas.drawBitmap(bmpMine, null, tempRect, paintPixel);
+    private void drawPreservingAspect(Canvas canvas, Bitmap bmp, float x, float y, float w, float h) {
+        if (bmp == null) return;
+        float bmpRatio = (float) bmp.getWidth() / bmp.getHeight();
+        float boxRatio = w / h;
+        float drawW = w;
+        float drawH = h;
+        if (bmpRatio > boxRatio) {
+            drawH = w / bmpRatio;
         } else {
+            drawW = h * bmpRatio;
+        }
+        float cx = x + w / 2f;
+        float cy = y + h / 2f;
+        tempRect.set(cx - drawW / 2f, cy - drawH / 2f, cx + drawW / 2f, cy + drawH / 2f);
+        canvas.drawBitmap(bmp, null, tempRect, paintPixel);
+    }
+
+    private void drawOreVein(Canvas canvas, Game.Mine m, int index) {
+        if (bmpMine != null) {
+            drawPreservingAspect(canvas, bmpMine, m.x, m.y, m.w, m.h);
+        } else {
+            tempRect.set(m.x, m.y, m.x + m.w, m.y + m.h);
             paintFill.setStyle(Paint.Style.FILL);
             paintFill.setColor(0xFF2D241E);
             canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
@@ -807,6 +862,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
         boolean flash = (game.elapsed - game.hits.getOrDefault("mine" + index, -10f)) < 0.18f;
         if (flash) {
+            tempRect.set(m.x, m.y, m.x + m.w, m.y + m.h);
             paintStroke.setStyle(Paint.Style.STROKE);
             paintStroke.setStrokeWidth(3f);
             paintStroke.setColor(0xFFFEF3C7);
@@ -815,45 +871,29 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawBuilding(Canvas canvas, Game.Building b) {
-        tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
-
+        Bitmap bmp = null;
         if ("wall".equals(b.type)) {
-            if (bmpWall != null) {
-                canvas.drawBitmap(bmpWall, null, tempRect, paintPixel);
-            } else {
-                paintFill.setStyle(Paint.Style.FILL);
-                paintFill.setColor(0xFF383532);
-                canvas.drawRoundRect(tempRect, 3f, 3f, paintFill);
-            }
+            bmp = bmpWall;
         } else if ("forge".equals(b.type)) {
-            Bitmap fb = game.forgeOpen ? bmpForgeOpen : bmpForgeClosed;
-            if (fb != null) {
-                canvas.drawBitmap(fb, null, tempRect, paintPixel);
-            } else {
-                paintFill.setStyle(Paint.Style.FILL);
-                paintFill.setColor(0xFF1C1917);
-                canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
-            }
+            bmp = game.forgeOpen ? bmpForgeOpen : bmpForgeClosed;
         } else if ("vault".equals(b.type) || "depot".equals(b.type)) {
-            if (bmpVault != null) {
-                canvas.drawBitmap(bmpVault, null, tempRect, paintPixel);
-            } else {
-                paintFill.setStyle(Paint.Style.FILL);
-                paintFill.setColor(0xFF3B1A0A);
-                canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
-            }
+            bmp = bmpVault;
         } else if ("turret".equals(b.type)) {
-            if (bmpTurret != null) {
-                canvas.drawBitmap(bmpTurret, null, tempRect, paintPixel);
-            } else {
-                paintFill.setStyle(Paint.Style.FILL);
-                paintFill.setColor(0xFF292524);
-                canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
-            }
+            bmp = bmpTurret;
+        }
+
+        if (bmp != null) {
+            drawPreservingAspect(canvas, bmp, b.x, b.y, b.w, b.h);
+        } else {
+            tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
+            paintFill.setStyle(Paint.Style.FILL);
+            paintFill.setColor("forge".equals(b.type) ? 0xFF1C1917 : "wall".equals(b.type) ? 0xFF383532 : 0xFF3B1A0A);
+            canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
         }
 
         // Bordo di selezione in cantiere
         if ("build".equals(game.phase) && draggingBuilding == b) {
+            tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
             paintStroke.setStyle(Paint.Style.STROKE);
             paintStroke.setStrokeWidth(3f);
             paintStroke.setColor(0xFFFBBF24);
@@ -862,10 +902,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawMonster(Canvas canvas, Game.Enemy e) {
-        tempRect.set(e.x, e.y, e.x + e.w, e.y + e.h);
         if (bmpGoblin != null) {
-            canvas.drawBitmap(bmpGoblin, null, tempRect, paintPixel);
+            drawPreservingAspect(canvas, bmpGoblin, e.x, e.y, e.w, e.h);
         } else {
+            tempRect.set(e.x, e.y, e.x + e.w, e.y + e.h);
             paintFill.setStyle(Paint.Style.FILL);
             paintFill.setColor(0xFF16A34A);
             canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
@@ -1421,13 +1461,25 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.drawText("Goblin e mostri abbattuti: " + game.kills, Game.W / 2f, midY, paintText);
         canvas.drawText("Mura e baliste edificate: " + game.stats.built, Game.W / 2f, midY + 25f, paintText);
 
+        btnReturnHub.set(100f, midY + 80f, Game.W - 100f, midY + 140f);
+        btnRestart.set(100f, midY + 155f, Game.W - 100f, midY + 215f);
+
+        paintFill.setColor(0xFF047857);
+        canvas.drawRoundRect(btnReturnHub, 10f, 10f, paintFill);
+        paintStroke.setColor(0xFF6EE7B7);
+        paintStroke.setStrokeWidth(2f);
+        canvas.drawRoundRect(btnReturnHub, 10f, 10f, paintStroke);
+        paintText.setTextSize(16f);
+        paintText.setColor(0xFFFFFFFF);
+        canvas.drawText("TORNA ALL'AVAMPOSTO", btnReturnHub.centerX(), btnReturnHub.centerY() + 6f, paintText);
+
         paintFill.setColor(0xFFB91C1C);
         canvas.drawRoundRect(btnRestart, 10f, 10f, paintFill);
         paintStroke.setColor(0xFFFCA5A5);
         canvas.drawRoundRect(btnRestart, 10f, 10f, paintStroke);
         paintText.setTextSize(16f);
         paintText.setColor(0xFFFFFFFF);
-        canvas.drawText("NUOVA SPEDIZIONE", btnRestart.centerX(), btnRestart.centerY() + 6f, paintText);
+        canvas.drawText("RIGIOCA SPEDIZIONE", btnRestart.centerX(), btnRestart.centerY() + 6f, paintText);
     }
 
     private void drawPauseOverlay(Canvas canvas) {
@@ -1435,6 +1487,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.drawRect(0f, 0f, Game.W, virtualH, paintFill);
 
         float midY = virtualH / 2f;
+        btnResume.set(150f, midY - 10f, 390f, midY + 45f);
+        btnPauseRestart.set(150f, midY + 60f, 390f, midY + 115f);
+
         paintText.setTextAlign(Paint.Align.CENTER);
         paintText.setTextSize(28f);
         paintText.setColor(0xFFFBBF24);
@@ -1449,11 +1504,112 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.drawText("RIPRENDI", btnResume.centerX(), btnResume.centerY() + 6f, paintText);
 
         paintFill.setColor(0xFFB91C1C);
-        canvas.drawRoundRect(btnRestart, 8f, 8f, paintFill);
+        canvas.drawRoundRect(btnPauseRestart, 8f, 8f, paintFill);
         paintStroke.setColor(0xFFFCA5A5);
-        canvas.drawRoundRect(btnRestart, 8f, 8f, paintStroke);
+        canvas.drawRoundRect(btnPauseRestart, 8f, 8f, paintStroke);
         paintText.setTextSize(16f);
         paintText.setColor(0xFFFFFFFF);
-        canvas.drawText("RICOMINCIA", btnRestart.centerX(), btnRestart.centerY() + 6f, paintText);
+        canvas.drawText("RICOMINCIA", btnPauseRestart.centerX(), btnPauseRestart.centerY() + 6f, paintText);
+    }
+
+    private void drawHub(Canvas canvas) {
+        // Testata Avamposto
+        paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(22f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("AVAMPOSTO DEI NANI", Game.W / 2f, 75f, paintText);
+
+        paintText.setTextSize(13f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("SALA DELLE SPEDIZIONI & RISERVE", Game.W / 2f, 102f, paintText);
+
+        // Magazzino Riserve Centrali (Chip Oro/Ferro)
+        tempRect.set(40f, 120f, Game.W - 40f, 175f);
+        paintFill.setColor(0xFF26150F);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+        paintStroke.setColor(0xFFB45309);
+        paintStroke.setStrokeWidth(2f);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
+
+        paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(14f);
+        paintText.setColor(0xFFF59E0B);
+        canvas.drawText("SCORTE ROCCA: " + game.clanIron + " Ferro  |  " + game.clanWood + " Legname", tempRect.centerX(), 154f, paintText);
+
+        // 1. Scheda Spedizione: MINIERA DI FERRO
+        boolean selIron = "mine_iron".equals(game.selectedBiome);
+        tempRect.set(cardMineIron);
+        paintFill.setColor(selIron ? 0xFF351C12 : 0xFF20130C);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintFill);
+        paintStroke.setColor(selIron ? 0xFFF59E0B : 0xFF78350F);
+        paintStroke.setStrokeWidth(selIron ? 3f : 1.5f);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintStroke);
+
+        // Icona Miniera a sinistra senza distorsioni
+        drawPreservingAspect(canvas, bmpMine, cardMineIron.left + 16f, cardMineIron.top + 20f, 96f, 72f);
+
+        paintText.setTextAlign(Paint.Align.LEFT);
+        paintText.setTextSize(17f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("MINIERA DI FERRO", cardMineIron.left + 125f, cardMineIron.top + 38f, paintText);
+
+        paintText.setTextSize(12f);
+        paintText.setColor(0xFFFEF3C7);
+        canvas.drawText("Gimmick: Fucina fusa, sfera pesante", cardMineIron.left + 125f, cardMineIron.top + 64f, paintText);
+
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("Spacca la roccia e forgia lingotti.", cardMineIron.left + 125f, cardMineIron.top + 88f, paintText);
+
+        paintText.setTextSize(13f);
+        paintText.setColor(selIron ? 0xFF34D399 : 0xFF94A3B8);
+        canvas.drawText(selIron ? "● SELEZIONATA" : "Tocca per selezionare", cardMineIron.left + 125f, cardMineIron.top + 120f, paintText);
+
+        // 2. Scheda Spedizione: BOSCO DEI NANI
+        boolean selForest = "forest_wood".equals(game.selectedBiome);
+        tempRect.set(cardForestWood);
+        paintFill.setColor(selForest ? 0xFF14291D : 0xFF171717);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintFill);
+        paintStroke.setColor(!game.forestUnlocked ? 0xFF52525B : selForest ? 0xFF10B981 : 0xFF047857);
+        paintStroke.setStrokeWidth(selForest ? 3f : 1.5f);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintStroke);
+
+        // Icona Legno / Scudo a sinistra
+        drawPreservingAspect(canvas, bmpShield, cardForestWood.left + 16f, cardForestWood.top + 20f, 96f, 72f);
+
+        paintText.setTextAlign(Paint.Align.LEFT);
+        paintText.setTextSize(17f);
+        paintText.setColor(game.forestUnlocked ? 0xFF34D399 : 0xFFA1A1AA);
+        canvas.drawText("BOSCO DEI NANI", cardForestWood.left + 125f, cardForestWood.top + 38f, paintText);
+
+        paintText.setTextSize(12f);
+        paintText.setColor(0xFFE2E8F0);
+        canvas.drawText("Gimmick: Ceppi elastici & segheria", cardForestWood.left + 125f, cardForestWood.top + 64f, paintText);
+
+        if (game.forestUnlocked) {
+            paintText.setColor(0xFFD6D3D1);
+            canvas.drawText("Raccogli legname pregiato per baliste.", cardForestWood.left + 125f, cardForestWood.top + 88f, paintText);
+            paintText.setTextSize(13f);
+            paintText.setColor(selForest ? 0xFF34D399 : 0xFF94A3B8);
+            canvas.drawText(selForest ? "● SELEZIONATA" : "Tocca per selezionare", cardForestWood.left + 125f, cardForestWood.top + 120f, paintText);
+        } else {
+            paintText.setColor(game.clanIron >= 14 ? 0xFFFBBF24 : 0xFFEF4444);
+            canvas.drawText("Richiede 14 Ferro (Hai: " + game.clanIron + ")", cardForestWood.left + 125f, cardForestWood.top + 88f, paintText);
+            paintText.setTextSize(13f);
+            paintText.setColor(game.clanIron >= 14 ? 0xFFFBBF24 : 0xFF71717A);
+            canvas.drawText(game.clanIron >= 14 ? "TOCCA PER SBLOCCARE (14 Fe)" : "BLOCCATA", cardForestWood.left + 125f, cardForestWood.top + 120f, paintText);
+        }
+
+        // Tasto centrale: AVVIA SPEDIZIONE
+        paintFill.setColor(0xFF047857);
+        canvas.drawRoundRect(btnStartExpedition, 10f, 10f, paintFill);
+        paintStroke.setColor(0xFF6EE7B7);
+        paintStroke.setStrokeWidth(2.5f);
+        canvas.drawRoundRect(btnStartExpedition, 10f, 10f, paintStroke);
+
+        paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(18f);
+        paintText.setColor(0xFFFFFFFF);
+        String startLabel = "mine_iron".equals(game.selectedBiome) ? "ENTRA NELLA MINIERA" : "ESPLORA IL BOSCO";
+        canvas.drawText(startLabel, btnStartExpedition.centerX(), btnStartExpedition.centerY() + 7f, paintText);
     }
 }
