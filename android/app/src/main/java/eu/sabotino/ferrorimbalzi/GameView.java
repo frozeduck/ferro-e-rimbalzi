@@ -32,6 +32,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     // Viewport reattivo 100% Fullscreen per qualsiasi proporzione di schermo (16:9, 19.5:9, 20:9, ecc.)
     private float viewScale = 1f;
     private float virtualH = 960f;
+    private float safeInsetTop = 0f; // Margine protettivo notch/fotocamera punch-hole in pixel virtuali
     private float offsetX = 0f;
     private float offsetY = 0f;
 
@@ -193,6 +194,30 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         for (int i = 0; i < particles.length; i++) {
             particles[i] = new Particle();
         }
+
+        // Rilevamento DisplayCutout / Notch / Fotocamera punch-hole per evitare sovrapposizioni
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            setOnApplyWindowInsetsListener((v, insets) -> {
+                float rawTop = 0f;
+                android.view.DisplayCutout cutout = insets.getDisplayCutout();
+                if (cutout != null) {
+                    rawTop = Math.max(rawTop, cutout.getSafeInsetTop());
+                }
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    android.graphics.Insets cutoutInsets = insets.getInsets(android.view.WindowInsets.Type.displayCutout());
+                    rawTop = Math.max(rawTop, cutoutInsets.top);
+                }
+                if (rawTop > 0f && viewScale > 0f) {
+                    float vTop = rawTop / viewScale;
+                    if (vTop > safeInsetTop) {
+                        safeInsetTop = vTop;
+                        game.setTopInset(safeInsetTop);
+                        updateDynamicLayout(virtualH);
+                    }
+                }
+                return insets;
+            });
+        }
     }
 
     private void loadClanProgress(Context context) {
@@ -319,6 +344,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         offsetX = 0f;
         offsetY = 0f;
 
+        // Se lo schermo e' ultra-allungato (aspect ratio > 19:9 come il Galaxy Z Flip 7, 22:9),
+        // garantiamo un margine protettivo superiore minimo (44 virtual px) per evitare
+        // che il foro della fotocamera punch-hole copra l'HUD o la mappa dei giacimenti
+        if (virtualH > 1050f) {
+            safeInsetTop = Math.max(safeInsetTop, 44f);
+        }
+
+        game.setTopInset(safeInsetTop);
         game.setVirtualHeight(virtualH);
         updateDynamicLayout(virtualH);
     }
@@ -334,6 +367,32 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         btnWall.set(15f, btnTop, 165f, btnBottom);
         btnTurret.set(175f, btnTop, 325f, btnBottom);
         btnStartWave.set(335f, btnTop, 525f, btnBottom);
+
+        // Pulsanti Aiuto e Pausa nell'HUD
+        float topY = safeInsetTop + 10f;
+        btnHelp.set(440f, topY, 482f, topY + 60f);
+        btnPause.set(488f, topY, 530f, topY + 60f);
+
+        // Card ed Edifici Hub Avamposto (posizionati sotto la fotocamera)
+        cardHubForge.set(24f, safeInsetTop + 200f, 256f, safeInsetTop + 395f);
+        cardHubTavern.set(284f, safeInsetTop + 200f, 516f, safeInsetTop + 395f);
+        cardHubBank.set(24f, safeInsetTop + 415f, 256f, safeInsetTop + 610f);
+        cardHubGate.set(284f, safeInsetTop + 415f, 516f, safeInsetTop + 610f);
+
+        // Modali dell'Hub
+        btnUpgradeHp.set(40f, safeInsetTop + 220f, 500f, safeInsetTop + 320f);
+        btnUpgradeCap.set(40f, safeInsetTop + 335f, 500f, safeInsetTop + 435f);
+        btnUpgradeDmg.set(40f, safeInsetTop + 450f, 500f, safeInsetTop + 550f);
+
+        btnTavernHeart.set(40f, safeInsetTop + 220f, 500f, safeInsetTop + 320f);
+        btnTavernSpeed.set(40f, safeInsetTop + 335f, 500f, safeInsetTop + 435f);
+        btnTavernCharge.set(40f, safeInsetTop + 450f, 500f, safeInsetTop + 550f);
+
+        cardMineIron.set(25f, safeInsetTop + 210f, 515f, safeInsetTop + 350f);
+        cardForestWood.set(25f, safeInsetTop + 370f, 515f, safeInsetTop + 510f);
+        btnStartExpedition.set(50f, safeInsetTop + 530f, 490f, safeInsetTop + 605f);
+        btnModalClose.set(130f, safeInsetTop + 630f, 410f, safeInsetTop + 695f);
+        btnReturnHub.set(150f, safeInsetTop + 650f, 390f, safeInsetTop + 715f);
 
         float midY = vH / 2f;
         cardUpgrade1.set(30f, midY - 265f, 510f, midY - 115f);
@@ -975,20 +1034,21 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     private void drawMinePerimeter(Canvas canvas) {
         float wallBottom = virtualH - 115f;
+        float wallTop = safeInsetTop + 65f;
 
         // Trave portante superiore in legno di quercia
         paintFill.setStyle(Paint.Style.FILL);
         paintFill.setColor(0xFF382214);
-        canvas.drawRect(0f, 65f, Game.W, 73f, paintFill);
+        canvas.drawRect(0f, wallTop, Game.W, wallTop + 8f, paintFill);
 
         // Travi laterali borchiate con ferro battuto fino al pannello inferiore
         paintFill.setColor(0xFF2E1C12);
-        canvas.drawRect(0f, 65f, 14f, wallBottom, paintFill);
-        canvas.drawRect(Game.W - 14f, 65f, Game.W, wallBottom, paintFill);
+        canvas.drawRect(0f, wallTop, 14f, wallBottom, paintFill);
+        canvas.drawRect(Game.W - 14f, wallTop, Game.W, wallBottom, paintFill);
 
         // Borchie di ferro lungo tutta l'altezza dello schermo
         paintFill.setColor(0xFF78716C);
-        for (float y = 90f; y < wallBottom - 10f; y += 50f) {
+        for (float y = wallTop + 25f; y < wallBottom - 10f; y += 50f) {
             canvas.drawCircle(7f, y, 2.5f, paintFill);
             canvas.drawCircle(Game.W - 7f, y, 2.5f, paintFill);
         }
@@ -997,8 +1057,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintStroke.setStyle(Paint.Style.STROKE);
         paintStroke.setColor(0xFF573E30);
         paintStroke.setStrokeWidth(1.5f);
-        canvas.drawLine(14f, 80f, 14f, wallBottom, paintStroke);
-        canvas.drawLine(Game.W - 14f, 80f, Game.W - 14f, wallBottom, paintStroke);
+        canvas.drawLine(14f, wallTop + 15f, 14f, wallBottom, paintStroke);
+        canvas.drawLine(Game.W - 14f, wallTop + 15f, Game.W - 14f, wallBottom, paintStroke);
     }
 
     private void drawDwarvenTrench(Canvas canvas) {
@@ -1298,19 +1358,22 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawHUD(Canvas canvas) {
-        float topBarH = 80f;
+        float hudBarH = safeInsetTop + 80f;
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setShader(new LinearGradient(0f, 0f, 0f, topBarH, 0xFF24150F, 0xFF140C09, Shader.TileMode.CLAMP));
-        canvas.drawRect(0f, 0f, Game.W, topBarH, paintFill);
+        paintFill.setShader(new LinearGradient(0f, 0f, 0f, hudBarH, 0xFF24150F, 0xFF140C09, Shader.TileMode.CLAMP));
+        canvas.drawRect(0f, 0f, Game.W, hudBarH, paintFill);
         paintFill.setShader(null);
 
         paintStroke.setStyle(Paint.Style.STROKE);
         paintStroke.setColor(0xFF78350F);
         paintStroke.setStrokeWidth(2f);
-        canvas.drawLine(0f, topBarH, Game.W, topBarH, paintStroke);
+        canvas.drawLine(0f, hudBarH, Game.W, hudBarH, paintStroke);
+
+        float topY = safeInsetTop + 10f;
+        float tabBottom = topY + 60f;
 
         // 1. Scheda ONDATE (x=10f..105f)
-        tempRect.set(10f, 10f, 105f, 70f);
+        tempRect.set(10f, topY, 105f, tabBottom);
         paintFill.setColor(0xFF2E190E);
         canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
         paintStroke.setColor(0xFFB45309);
@@ -1320,13 +1383,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintText.setTextAlign(Paint.Align.CENTER);
         paintText.setTextSize(11f);
         paintText.setColor(0xFFD6D3D1);
-        canvas.drawText("ASSEDIO", tempRect.centerX(), 28f, paintText);
+        canvas.drawText("ASSEDIO", tempRect.centerX(), topY + 18f, paintText);
         paintText.setTextSize(16f);
         paintText.setColor(0xFFFBBF24);
-        canvas.drawText(game.wave + " / 5", tempRect.centerX(), 52f, paintText);
+        canvas.drawText(game.wave + " / 5", tempRect.centerX(), topY + 42f, paintText);
 
         // 2. Scheda INTEGRITA ROCCA (x=112f..240f)
-        tempRect.set(112f, 10f, 240f, 70f);
+        tempRect.set(112f, topY, 240f, tabBottom);
         paintFill.setColor(0xFF26120D);
         canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
         paintStroke.setColor(0xFF991B1B);
@@ -1335,7 +1398,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintText.setTextAlign(Paint.Align.CENTER);
         paintText.setTextSize(11f);
         paintText.setColor(0xFFFCA5A5);
-        canvas.drawText("ROCCA: " + game.hp + "/" + game.maxHp, tempRect.centerX(), 28f, paintText);
+        canvas.drawText("ROCCA: " + game.hp + "/" + game.maxHp, tempRect.centerX(), topY + 18f, paintText);
 
         // Orbi vitali piu grandi, nitidi e contrastati
         float heartStartX = 126f;
@@ -1343,15 +1406,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             float cx = heartStartX + i * 22f;
             boolean active = i < game.hp;
             paintFill.setColor(active ? 0xFFDC2626 : 0xFF3F3F46);
-            canvas.drawCircle(cx, 48f, 7f, paintFill);
+            canvas.drawCircle(cx, topY + 38f, 7f, paintFill);
             if (active) {
                 paintFill.setColor(0xFFFECACA);
-                canvas.drawCircle(cx - 2f, 46f, 2.5f, paintFill);
+                canvas.drawCircle(cx - 2f, topY + 36f, 2.5f, paintFill);
             }
         }
 
         // 3. Scheda RISORSE & SPEDIZIONE (x=247f..375f)
-        tempRect.set(247f, 10f, 375f, 70f);
+        tempRect.set(247f, topY, 375f, tabBottom);
         paintFill.setColor(0xFF2E190E);
         canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
         paintStroke.setColor(0xFFB45309);
@@ -1361,13 +1424,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintText.setTextAlign(Paint.Align.LEFT);
         paintText.setTextSize(13f);
         paintText.setColor(isForest ? 0xFF34D399 : 0xFFF59E0B);
-        canvas.drawText(isForest ? ("Legno: " + game.iron) : ("Ferro: " + game.iron + " Fe"), 257f, 32f, paintText);
+        canvas.drawText(isForest ? ("Legno: " + game.iron) : ("Ferro: " + game.iron + " Fe"), 257f, topY + 22f, paintText);
         paintText.setColor(isForest ? 0xFFA7F3D0 : 0xFF34D399);
-        canvas.drawText("In Cassa: " + game.delivered + "/" + game.target, 257f, 54f, paintText);
+        canvas.drawText("In Cassa: " + game.delivered + "/" + game.target, 257f, topY + 44f, paintText);
 
         // 4. Scheda TEMPO (x=382f..432f)
         int sec = (int) Math.max(0, game.duration - game.time);
-        tempRect.set(382f, 10f, 432f, 70f);
+        tempRect.set(382f, topY, 432f, tabBottom);
         paintFill.setColor(0xFF26120D);
         canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
         paintStroke.setColor(sec <= 5 ? 0xFFEF4444 : 0xFFB45309);
@@ -1376,10 +1439,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintText.setTextAlign(Paint.Align.CENTER);
         paintText.setTextSize(9f);
         paintText.setColor(0xFFD6D3D1);
-        canvas.drawText("TEMPO", tempRect.centerX(), 28f, paintText);
+        canvas.drawText("TEMPO", tempRect.centerX(), topY + 18f, paintText);
         paintText.setTextSize(16f);
         paintText.setColor(sec <= 5 ? 0xFFEF4444 : 0xFFFDE68A);
-        canvas.drawText(sec + "s", tempRect.centerX(), 52f, paintText);
+        canvas.drawText(sec + "s", tempRect.centerX(), topY + 42f, paintText);
 
         // 5. Pulsante Aiuto / Tutorial (?) (x=440f..482f)
         paintFill.setColor(0xFF382214);
@@ -1771,14 +1834,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintText.setTextAlign(Paint.Align.CENTER);
         paintText.setTextSize(22f);
         paintText.setColor(0xFFFBBF24);
-        canvas.drawText("ROCCAFORTE DEI NANI", Game.W / 2f, 75f, paintText);
+        canvas.drawText("ROCCAFORTE DEI NANI", Game.W / 2f, safeInsetTop + 75f, paintText);
 
         paintText.setTextSize(12f);
         paintText.setColor(0xFFD6D3D1);
-        canvas.drawText("PIAZZA DELL'AVAMPOSTO CENTRALE", Game.W / 2f, 98f, paintText);
+        canvas.drawText("PIAZZA DELL'AVAMPOSTO CENTRALE", Game.W / 2f, safeInsetTop + 98f, paintText);
 
         // Chip Riserve Centrali (Ferro | Legname | Vittorie)
-        tempRect.set(20f, 115f, Game.W - 20f, 175f);
+        tempRect.set(20f, safeInsetTop + 115f, Game.W - 20f, safeInsetTop + 175f);
         paintFill.setStyle(Paint.Style.FILL);
         paintFill.setColor(0xFF26150F);
         canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
@@ -1789,7 +1852,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
         paintText.setTextSize(13f);
         paintText.setColor(0xFFF59E0B);
-        canvas.drawText("Ferro: " + game.clanIron + " Fe   |   Legname: " + game.clanWood + "   |   Raid Vinti: " + game.clanRunsWon, tempRect.centerX(), 152f, paintText);
+        canvas.drawText("Ferro: " + game.clanIron + " Fe   |   Legname: " + game.clanWood + "   |   Raid Vinti: " + game.clanRunsWon, tempRect.centerX(), safeInsetTop + 152f, paintText);
 
         // 1. FUCINA DEI FABBRI (In alto a SX)
         tempRect.set(cardHubForge);

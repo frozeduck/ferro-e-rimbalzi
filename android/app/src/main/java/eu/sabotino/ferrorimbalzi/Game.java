@@ -161,9 +161,9 @@ public class Game {
             buildings.add(new Building("wall0", "wood_wall", 395f, 260f, 110f, 24f));
 
             // 3 Ceppi di Alberi Antichi per raccolta legname
-            mines.add(new Mine(35f, 95f, 130f, 50f));
-            mines.add(new Mine(205f, 80f, 130f, 50f));
-            mines.add(new Mine(375f, 95f, 130f, 50f));
+            mines.add(new Mine(35f, topInset + 95f, 130f, 50f));
+            mines.add(new Mine(205f, topInset + 80f, 130f, 50f));
+            mines.add(new Mine(375f, topInset + 95f, 130f, 50f));
 
             // Funghi elastici bouncers
             mushrooms.add(new Mushroom(115f, 260f, 44f, 44f));
@@ -175,9 +175,9 @@ public class Game {
             buildings.add(new Building("wall0", "wall", 395f, 260f, 110f, 24f));
 
             // 3 Giacimenti nel settore minerario superiore
-            mines.add(new Mine(35f, 95f, 130f, 50f));
-            mines.add(new Mine(205f, 80f, 130f, 50f));
-            mines.add(new Mine(375f, 95f, 130f, 50f));
+            mines.add(new Mine(35f, topInset + 95f, 130f, 50f));
+            mines.add(new Mine(205f, topInset + 80f, 130f, 50f));
+            mines.add(new Mine(375f, topInset + 95f, 130f, 50f));
         }
     }
 
@@ -307,6 +307,14 @@ public class Game {
         return H - 145f;
     }
 
+    public float topInset = 0f;
+
+    public void setTopInset(float inset) {
+        if (inset < 0f) inset = 0f;
+        this.topInset = inset;
+        initDefaultWorld();
+    }
+
     public void setVirtualHeight(float newH) {
         if (newH < 800f) newH = 800f;
         this.H = newH;
@@ -402,10 +410,10 @@ public class Game {
                 e.maxHp = 2 + wave / 2;
             }
             e.x = 45f + (i % 5) * 94f;
-            e.y = 50f - (i / 5) * 55f;
+            e.y = topInset + 50f - (i / 5) * 55f;
             enemies.add(e);
         }
-        event("Ondata " + wave + " · difendi il nucleo", 270f, 160f, 0xFFEF9A8E);
+        event("Ondata " + wave + " · difendi il nucleo", 270f, topInset + 160f, 0xFFEF9A8E);
         return true;
     }
 
@@ -443,7 +451,7 @@ public class Game {
     public boolean canPlace(float rx, float ry, float rw, float rh, String exclude) {
         if (Float.isNaN(rx) || Float.isNaN(ry) || Float.isNaN(rw) || Float.isNaN(rh)) return false;
         // Zona edificabile mediana verticale
-        if (rx < 16f || rx + rw > W - 16f || ry < 220f || ry + rh > H - 230f) return false;
+        if (rx < 16f || rx + rw > W - 16f || ry < topInset + 220f || ry + rh > H - 230f) return false;
         for (Building b : buildings) {
             if (b.id.equals(exclude)) continue;
             if (rx < b.x + b.w + 10f && rx + rw + 10f > b.x && ry < b.y + b.h + 10f && ry + rh + 10f > b.y) {
@@ -698,7 +706,7 @@ public class Game {
                 // Pareti laterali e superiore
                 if (ball.x < ball.r + 14f) { ball.x = ball.r + 14f; ball.vx = Math.abs(ball.vx); }
                 if (ball.x > W - 14f - ball.r) { ball.x = W - 14f - ball.r; ball.vx = -Math.abs(ball.vx); }
-                if (ball.y < ball.r + 80f) { ball.y = ball.r + 80f; ball.vy = Math.abs(ball.vy); }
+                if (ball.y < ball.r + topInset + 80f) { ball.y = ball.r + topInset + 80f; ball.vy = Math.abs(ball.vy); }
 
                 // Rimbalzo sulla racchetta
                 if (ball.vy > 0f && ball.y + ball.r >= paddle.y && ball.y - ball.r < paddle.y + 16f

@@ -1284,6 +1284,185 @@ def gen_pixel_nano():
     print('Pixel art generata: sprite_nano.png (96x96)')
 
 
+def gen_pixel_app_icon():
+    """Icona dell'App Fantasy Nanica 16-bit per Ferro e Rimbalzi:
+    - Bordo in pietra runica e rivetti dorati
+    - Sfondo ossidiana con braci incandescenti
+    - Incudine d'acciaio con corno splendente
+    - Due picconi da guerra nanici incrociati con aste di quercia
+    - La Sfera Runica infuocata al centro con glifo nanico
+    - Scintille dorate di forgia
+    Generata a matrice pixel pura e scalata per tutti i formati mipmap e drawable (fino a 512x512).
+    """
+    w, h = 48, 48
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # 1. Base arrotondata dell'icona (scudo quadrato con angoli smussati)
+    for y in range(h):
+        for x in range(w):
+            dx = min(x, w - 1 - x)
+            dy = min(y, h - 1 - y)
+            dist_corner = 0
+            if dx < 6 and dy < 6:
+                dist_corner = (6 - dx) ** 2 + (6 - dy) ** 2
+                if dist_corner > 36:
+                    continue
+
+            if dist_corner > 24 or x <= 1 or x >= w - 2 or y <= 1 or y >= h - 2:
+                pix[x, y] = PAL['stone_shadow']
+            elif dist_corner > 16 or x == 2 or x == w - 3 or y == 2 or y == h - 3:
+                pix[x, y] = PAL['gold_dark'] if (x + y) % 2 == 0 else PAL['gold_mid']
+            elif dist_corner > 10 or x == 3 or x == w - 4 or y == 3 or y == h - 4:
+                pix[x, y] = PAL['gold_light'] if (x + y) % 4 == 0 else PAL['gold_mid']
+            elif x == 4 or x == w - 5 or y == 4 or y == h - 5:
+                pix[x, y] = PAL['black']
+            else:
+                if y > 34:
+                    pix[x, y] = PAL['fire_shadow'] if (x + y) % 2 == 0 else PAL['fire_dark']
+                elif y > 26:
+                    pix[x, y] = PAL['fire_shadow'] if (x + y) % 3 == 0 else PAL['stone_dark']
+                else:
+                    pix[x, y] = PAL['black'] if (x + y) % 4 != 0 else PAL['stone_shadow']
+
+    # Rivetti d'oro nei 4 angoli
+    rivets = [(7, 7), (40, 7), (7, 40), (40, 40)]
+    for rx, ry in rivets:
+        pix[rx, ry] = PAL['gold_high']
+        pix[rx - 1, ry] = PAL['gold_dark']
+        pix[rx + 1, ry] = PAL['gold_dark']
+        pix[rx, ry - 1] = PAL['gold_dark']
+        pix[rx, ry + 1] = PAL['gold_dark']
+
+    # 2. Picconi Nanici Incrociati (Aste di quercia che si incrociano a X)
+    for i in range(27):
+        px = 11 + i
+        py = 37 - i
+        pix[px, py] = PAL['wood_mid']
+        if px + 1 < w:
+            pix[px + 1, py] = PAL['wood_dark']
+
+    for i in range(27):
+        px = 36 - i
+        py = 37 - i
+        pix[px, py] = PAL['wood_mid']
+        if px - 1 >= 0:
+            pix[px - 1, py] = PAL['wood_shadow']
+
+    # Teste d'acciaio dei picconi
+    pick_left = [
+        (8, 7), (9, 7), (10, 8), (11, 9), (12, 10), (13, 11), (14, 12),
+        (7, 8), (8, 8), (9, 9), (10, 10), (11, 11),
+        (6, 9), (7, 9), (8, 10)
+    ]
+    for px, py in pick_left:
+        pix[px, py] = PAL['iron_light'] if py == 7 or px == 6 else PAL['iron_mid']
+    pix[12, 12] = PAL['gold_light']
+    pix[13, 13] = PAL['gold_mid']
+
+    pick_right = [
+        (39, 7), (38, 7), (37, 8), (36, 9), (35, 10), (34, 11), (33, 12),
+        (40, 8), (39, 8), (38, 9), (37, 10), (36, 11),
+        (41, 9), (40, 9), (39, 10)
+    ]
+    for px, py in pick_right:
+        pix[px, py] = PAL['iron_light'] if py == 7 or px == 41 else PAL['iron_mid']
+    pix[35, 12] = PAL['gold_light']
+    pix[34, 13] = PAL['gold_mid']
+
+    # 3. Grande Incudine Nanica al centro-basso (y=32..42, x=13..34)
+    for y in range(39, 43):
+        for x in range(16, 32):
+            if x == 16 or x == 31 or y == 42:
+                pix[x, y] = PAL['black']
+            elif y == 39:
+                pix[x, y] = PAL['iron_light']
+            else:
+                pix[x, y] = PAL['iron_mid'] if (x + y) % 2 == 0 else PAL['iron_dark']
+    for y in range(36, 39):
+        for x in range(19, 29):
+            pix[x, y] = PAL['iron_dark'] if x == 19 or x == 28 else PAL['iron_mid']
+    for y in range(32, 36):
+        for x in range(13, 35):
+            if x == 13 or x == 34 or y == 32:
+                pix[x, y] = PAL['black']
+            elif y == 33:
+                pix[x, y] = PAL['iron_white'] if x > 16 else PAL['iron_light']
+            else:
+                pix[x, y] = PAL['iron_light'] if x > 20 else PAL['iron_mid']
+    pix[12, 33] = PAL['iron_light']
+    pix[12, 34] = PAL['black']
+
+    # 4. Sfera Runica Infuocata ("Rimbalzi") al centro sopra l'incudine (cx=24, cy=21, r=6.5)
+    cx, cy, r = 24, 21, 6.5
+    for y in range(14, 29):
+        for x in range(17, 32):
+            d = ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5
+            if d <= r:
+                if d > r - 1.0:
+                    pix[x, y] = PAL['fire_shadow']
+                elif d > r - 2.2:
+                    pix[x, y] = PAL['fire_mid']
+                elif d > r - 3.5:
+                    pix[x, y] = PAL['fire_orange']
+                elif d > r - 4.8:
+                    pix[x, y] = PAL['fire_yellow']
+                else:
+                    pix[x, y] = PAL['fire_white']
+
+    # Glifo / Martello runico al centro della sfera
+    pix[23, 19] = PAL['gold_shadow']
+    pix[24, 19] = PAL['gold_shadow']
+    pix[25, 19] = PAL['gold_shadow']
+    pix[22, 20] = PAL['gold_dark']
+    pix[23, 20] = PAL['gold_high']
+    pix[24, 20] = PAL['gold_high']
+    pix[25, 20] = PAL['gold_high']
+    pix[26, 20] = PAL['gold_dark']
+    pix[24, 21] = PAL['gold_dark']
+    pix[24, 22] = PAL['gold_dark']
+    pix[24, 23] = PAL['gold_dark']
+
+    # 5. Scintille di Forgia dorate e incandescenti
+    sparks = [(17, 13), (30, 13), (24, 12), (15, 22), (32, 22), (20, 30), (28, 30)]
+    for sx, sy in sparks:
+        pix[sx, sy] = PAL['fire_yellow']
+
+    # Salvataggio nei diversi formati
+    res_base = pathlib.Path(__file__).resolve().parent.parent / 'android/app/src/main/res'
+    
+    icon_512 = im.resize((512, 512), Image.Resampling.NEAREST)
+    icon_512.save(OUT_DIR / 'ic_launcher.png')
+
+    round_mask = Image.new('L', (512, 512), 0)
+    mask_draw = ImageDraw.Draw(round_mask)
+    mask_draw.ellipse((8, 8, 504, 504), fill=255)
+    icon_round_512 = icon_512.copy()
+    icon_round_512.putalpha(round_mask)
+    icon_round_512.save(OUT_DIR / 'ic_launcher_round.png')
+
+    densities = {
+        'mipmap-mdpi': 48,
+        'mipmap-hdpi': 72,
+        'mipmap-xhdpi': 96,
+        'mipmap-xxhdpi': 144,
+        'mipmap-xxxhdpi': 192,
+    }
+    for folder, size in densities.items():
+        target_dir = res_base / folder
+        target_dir.mkdir(parents=True, exist_ok=True)
+        scaled = im.resize((size, size), Image.Resampling.NEAREST)
+        scaled.save(target_dir / 'ic_launcher.png')
+        r_mask = Image.new('L', (size, size), 0)
+        d_mask = ImageDraw.Draw(r_mask)
+        d_mask.ellipse((1, 1, size - 2, size - 2), fill=255)
+        scaled_r = scaled.copy()
+        scaled_r.putalpha(r_mask)
+        scaled_r.save(target_dir / 'ic_launcher_round.png')
+
+    print('Icona App Pixel Art generata per drawable e tutte le densita mipmap (48..512px)!')
+
+
 if __name__ == '__main__':
     print('=== Inizio generazione Asset TRUE PIXEL ART (16-bit / 32-bit) ===')
     gen_pixel_miniera()
@@ -1310,4 +1489,6 @@ if __name__ == '__main__':
     gen_pixel_hub_banca()
     gen_pixel_hub_cancello()
     gen_pixel_nano()
+    # Icona Ufficiale App Pixel Art
+    gen_pixel_app_icon()
     print('=== Tutti gli sprite 16-bit Pixel Art generati con successo! ===')
