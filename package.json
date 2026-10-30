@@ -1,1 +1,1 @@
-{"name":"ferro-e-rimbalzi","version":"0.1.0","private":true,"type":"module","scripts":{"test":"node --test tests/core.test.js","start":"python3 -m http.server 8143 --bind 127.0.0.1 --directory dist"}}
+{"name":"ferro-e-rimbalzi","version":"0.2.0","private":true,"type":"module","scripts":{"test":"node --test tests/core.test.js","start":"python3 -m http.server 8143 --bind 127.0.0.1 --directory dist"}}

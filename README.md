@@ -4,6 +4,8 @@ Prototipo browser senza dipendenze: Breakout, trasporto delle risorse e costruzi
 
 **[Gioca su GitHub Pages](https://frozeduck.github.io/ferro-e-rimbalzi/)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
 
+Il gioco occupa la finestra senza scorrimento: menu iniziale, arena con HUD, barra delle abilità e menu di pausa. Gli strumenti di costruzione compaiono soltanto fra le ondate. Il campo mantiene le proporzioni quando si ridimensiona la finestra; il puntamento tiene conto delle bande laterali. Nessun font o asset esterno da scaricare.
+
 ## Prova
 
 `npm start` serve `dist/` su http://127.0.0.1:8143. I file statici funzionano con qualsiasi server HTTP.
@@ -16,7 +18,7 @@ Obiettivo: sopravvivere a 5 ondate e consegnare 14 ferro. Fra ondate si sceglie 
 
 `npm test` verifica catena economica, consumo del carico, collisioni, limiti delle costruzioni, richiamo, perdita del carico e transizioni/vittoria/sconfitta.
 
-La verifica opzionale nel browser richiede Playwright Core e Google Chrome disponibili nell'ambiente: `PLAYWRIGHT_CORE=/percorso/playwright-core/index.mjs CHROME=/percorso/chrome node tests/browser.mjs`. Il server locale deve essere avviato con `npm start`. Non serve per giocare né per pubblicare il sito.
+La verifica opzionale nel browser richiede Playwright Core e Google Chrome disponibili nell'ambiente: `PLAYWRIGHT_CORE=/percorso/playwright-core/index.mjs CHROME=/percorso/chrome node tests/browser.mjs`. Il server locale deve essere avviato con `npm start`. Si possono anche passare il percorso di Playwright e l'URL del gioco come primo e secondo argomento del comando. Il controllo prova desktop, telefono verticale e orizzontale, assenza di scorrimento, menu, puntamento, costruzione, consegna, pausa e fine partita. Non serve per giocare né per pubblicare il gioco.
 
 ## Pubblicazione
 
