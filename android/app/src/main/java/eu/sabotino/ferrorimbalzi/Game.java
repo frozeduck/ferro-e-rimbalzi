@@ -48,6 +48,14 @@ public class Game {
         }
     }
 
+    public static class Mushroom {
+        public float x, y, w, h;
+        public float bounceTime = 0f;
+        public Mushroom(float x, float y, float w, float h) {
+            this.x = x; this.y = y; this.w = w; this.h = h;
+        }
+    }
+
     public static class Enemy {
         public String id;
         public String type; // beetle, thief
@@ -115,6 +123,7 @@ public class Game {
     public Paddle paddle = new Paddle();
     public List<Building> buildings = new ArrayList<>();
     public List<Mine> mines = new ArrayList<>();
+    public List<Mushroom> mushrooms = new ArrayList<>();
     public List<Enemy> enemies = new ArrayList<>();
     public List<Effect> effects = new ArrayList<>();
     public List<String> events = new ArrayList<>();
@@ -128,16 +137,34 @@ public class Game {
 
     public void initDefaultWorld() {
         buildings.clear();
-        // Fonderia e Deposito con aspect ratio 1.50 (120x80) proporzionati allo sprite (192x128)
-        buildings.add(new Building("forge", "forge", 35f, 400f, 120f, 80f));
-        buildings.add(new Building("depot", "depot", 385f, 400f, 120f, 80f));
-        buildings.add(new Building("wall0", "wall", 395f, 260f, 110f, 24f));
-
         mines.clear();
-        // 3 Giacimenti nel settore minerario superiore
-        mines.add(new Mine(35f, 95f, 130f, 50f));
-        mines.add(new Mine(205f, 80f, 130f, 50f));
-        mines.add(new Mine(375f, 95f, 130f, 50f));
+        mushrooms.clear();
+
+        if ("forest_wood".equals(selectedBiome)) {
+            // Segheria runica e Magazzino del legname con aspect ratio proporzionato
+            buildings.add(new Building("sawmill", "sawmill", 35f, 400f, 120f, 80f));
+            buildings.add(new Building("depot", "depot", 385f, 400f, 120f, 80f));
+            buildings.add(new Building("wall0", "wood_wall", 395f, 260f, 110f, 24f));
+
+            // 3 Ceppi di Alberi Antichi per raccolta legname
+            mines.add(new Mine(35f, 95f, 130f, 50f));
+            mines.add(new Mine(205f, 80f, 130f, 50f));
+            mines.add(new Mine(375f, 95f, 130f, 50f));
+
+            // Funghi elastici bouncers
+            mushrooms.add(new Mushroom(115f, 260f, 44f, 44f));
+            mushrooms.add(new Mushroom(385f, 260f, 44f, 44f));
+        } else {
+            // Fonderia e Deposito con aspect ratio 1.50 (120x80) proporzionati allo sprite (192x128)
+            buildings.add(new Building("forge", "forge", 35f, 400f, 120f, 80f));
+            buildings.add(new Building("depot", "depot", 385f, 400f, 120f, 80f));
+            buildings.add(new Building("wall0", "wall", 395f, 260f, 110f, 24f));
+
+            // 3 Giacimenti nel settore minerario superiore
+            mines.add(new Mine(35f, 95f, 130f, 50f));
+            mines.add(new Mine(205f, 80f, 130f, 50f));
+            mines.add(new Mine(375f, 95f, 130f, 50f));
+        }
     }
 
     public void startExpedition(String biome) {
@@ -164,7 +191,11 @@ public class Game {
     }
 
     public void returnToHub() {
-        this.clanIron += this.delivered;
+        if ("forest_wood".equals(selectedBiome)) {
+            this.clanWood += this.delivered;
+        } else {
+            this.clanIron += this.delivered;
+        }
         this.screen = "hub";
         this.phase = "build";
         this.ball.held = true;
@@ -255,17 +286,26 @@ public class Game {
         recall = 0f;
         ball.held = true;
         enemies.clear();
+        boolean isForest = "forest_wood".equals(selectedBiome);
         int count = 3 + wave * 2;
         for (int i = 0; i < count; i++) {
             Enemy e = new Enemy();
             e.id = "enemy" + i;
-            e.type = (i % 3 == 2) ? "thief" : "beetle";
+            if (isForest) {
+                e.type = (i % 3 == 0) ? "treant" : "spider";
+                e.w = (i % 3 == 0) ? 46f : 36f;
+                e.h = (i % 3 == 0) ? 42f : 32f;
+                e.hp = (i % 3 == 0) ? (4 + wave) : (2 + wave / 2);
+                e.maxHp = e.hp;
+            } else {
+                e.type = (i % 3 == 2) ? "thief" : "beetle";
+                e.w = 42f;
+                e.h = 32f;
+                e.hp = 2 + wave / 2;
+                e.maxHp = 2 + wave / 2;
+            }
             e.x = 45f + (i % 5) * 94f;
             e.y = 50f - (i / 5) * 55f;
-            e.w = 42f;
-            e.h = 32f;
-            e.hp = 2 + wave / 2;
-            e.maxHp = 2 + wave / 2;
             enemies.add(e);
         }
         event("Ondata " + wave + " · difendi il nucleo", 270f, 160f, 0xFFEF9A8E);
@@ -323,11 +363,13 @@ public class Game {
 
     public boolean build(String type, float x, float y) {
         if (!"build".equals(phase)) return false;
-        int cost = "wall".equals(type) ? COST_WALL : "turret".equals(type) ? COST_TURRET : -1;
+        boolean isWall = "wall".equals(type) || "wood_wall".equals(type);
+        boolean isForest = "forest_wood".equals(selectedBiome);
+        int cost = isWall ? COST_WALL : "turret".equals(type) ? (isForest ? 6 : COST_TURRET) : -1;
         if (cost < 0 || iron < cost || buildings.size() >= 12) return false;
 
-        float rw = "wall".equals(type) ? 120f : 50f;
-        float rh = "wall".equals(type) ? 22f : 50f;
+        float rw = isWall ? 120f : 50f;
+        float rh = isWall ? 22f : 50f;
         float rx = Math.round((x - rw / 2f) / 16f) * 16f;
         float ry = Math.round((y - rh / 2f) / 16f) * 16f;
 
@@ -362,19 +404,28 @@ public class Game {
     }
 
     public boolean interact(String type) {
+        boolean isForest = "forest_wood".equals(selectedBiome);
         if ("mine".equals(type) && cargo() < capacity) {
             ball.ore++;
             stats.mined++;
-            event("+1 minerale", ball.x, ball.y - 18f, 0xFFD8A677);
+            if (isForest) {
+                event("+1 Tronco", ball.x, ball.y - 18f, 0xFF86EFAC);
+            } else {
+                event("+1 minerale", ball.x, ball.y - 18f, 0xFFD8A677);
+            }
             normalize();
             return true;
         }
-        if ("forge".equals(type) && forgeOpen && ball.ore > 0) {
+        if (("forge".equals(type) || "sawmill".equals(type)) && forgeOpen && ball.ore > 0) {
             int n = ball.ore;
             ball.metal += n;
             ball.ore = 0;
             stats.smelted += n;
-            event(n + " minerale → ferro!", ball.x, ball.y - 18f, 0xFFF8C467);
+            if (isForest) {
+                event(n + " tronchi → assi!", ball.x, ball.y - 18f, 0xFFFCD34D);
+            } else {
+                event(n + " minerale → ferro!", ball.x, ball.y - 18f, 0xFFF8C467);
+            }
             return true;
         }
         if ("depot".equals(type) && ball.metal > 0) {
@@ -382,7 +433,11 @@ public class Game {
             iron += n;
             delivered += n;
             ball.metal = 0;
-            event("Consegnati +" + n + " Fe", ball.x, ball.y - 22f, 0xFF92D4BD);
+            if (isForest) {
+                event("Consegnati +" + n + " Legno", ball.x, ball.y - 22f, 0xFF6EE7B7);
+            } else {
+                event("Consegnati +" + n + " Fe", ball.x, ball.y - 22f, 0xFF92D4BD);
+            }
             normalize();
             return true;
         }
@@ -479,9 +534,25 @@ public class Game {
             ball.y = paddle.y - 20f;
         }
 
+        for (Mushroom m : mushrooms) {
+            m.bounceTime = Math.max(0f, m.bounceTime - dt);
+        }
+
         for (Enemy e : enemies) {
             if (e.hp <= 0) continue;
-            e.y += dt * (e.type.equals("thief") ? 9f + wave : 5f + wave);
+            float speedY;
+            if ("spider".equals(e.type)) {
+                speedY = 14f + wave * 1.5f;
+                e.x += (float) Math.sin(elapsed * 5f + e.id.hashCode() % 10) * 45f * dt;
+                e.x = clamp(e.x, 20f, W - 20f - e.w);
+            } else if ("treant".equals(e.type)) {
+                speedY = 4f + wave * 0.7f;
+            } else if ("thief".equals(e.type)) {
+                speedY = 9f + wave;
+            } else {
+                speedY = 5f + wave;
+            }
+            e.y += dt * speedY;
             if (e.y + e.h >= H - 200f) {
                 e.hp = 0;
                 hp--;
@@ -542,6 +613,18 @@ public class Game {
                     ball.y = paddle.y - ball.r - 0.2f;
                 }
 
+                // Funghi elastici bouncers
+                for (Mushroom m : mushrooms) {
+                    if (collide(ball, m.x, m.y, m.w, m.h, true) && elapsed - hits.getOrDefault("mush" + m.hashCode(), -10f) > 0.18f) {
+                        hits.put("mush" + m.hashCode(), elapsed);
+                        m.bounceTime = 0.35f;
+                        ball.vx *= 1.10f;
+                        ball.vy *= 1.10f;
+                        normalize();
+                        event("+RIMBALZO+", m.x + m.w / 2f, m.y - 10f, 0xFFF472B6);
+                    }
+                }
+
                 // Miniere
                 for (int i = 0; i < mines.size(); i++) {
                     Mine m = mines.get(i);
@@ -553,8 +636,9 @@ public class Game {
 
                 // Edifici
                 for (Building facility : buildings) {
-                    boolean solid = facility.type.equals("wall") || facility.type.equals("turret")
-                            || (facility.type.equals("forge") && !forgeOpen);
+                    boolean solid = facility.type.equals("wall") || facility.type.equals("wood_wall")
+                            || facility.type.equals("turret")
+                            || ((facility.type.equals("forge") || facility.type.equals("sawmill")) && !forgeOpen);
                     if (collide(ball, facility, solid) && elapsed - hits.getOrDefault(facility.id, -10f) > 0.28f) {
                         hits.put(facility.id, elapsed);
                         interact(facility.type);

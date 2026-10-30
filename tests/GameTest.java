@@ -14,8 +14,9 @@ public class GameTest {
         testIlTempoScadutoFaPagareINemiciZeroIntegritaTermina();
         testSpedizioneCompletaEVincibileUsandoSoltantoTiriRichiamiERacchetta();
         testHubESelezioneSpedizione();
+        testSpedizioneNelBoscoDeiNani();
 
-        System.out.println("TUTTI I 10 TEST PASSATI CON SUCCESSO SUL NUOVO MODELLO VERTICALE! (10/10)");
+        System.out.println("TUTTI GLI 11 TEST PASSATI CON SUCCESSO! (11/11)");
     }
 
     private static void assertEquals(Object actual, Object expected, String message) {
@@ -248,5 +249,52 @@ public class GameTest {
         assertEquals(s.clanIron, 2, "Residuo ferro del clan coerente (16 - 14 = 2)");
 
         System.out.println("✔ L'Avamposto gestisce correttamente riserve, spedizioni e sblocco biomi");
+    }
+
+    public static void testSpedizioneNelBoscoDeiNani() {
+        Game s = new Game();
+        s.clanIron = 20;
+        s.unlockForest();
+        assertTrue(s.forestUnlocked, "Bosco deve essere sbloccato");
+
+        s.startExpedition("forest_wood");
+        assertEquals(s.selectedBiome, "forest_wood", "Bioma attivo Bosco dei Nani");
+        assertEquals(s.mushrooms.size(), 2, "Nel bosco ci sono 2 funghi elastici bouncers");
+
+        // Verifica edifici del bosco: Segheria al posto della fucina, Barricata in legno
+        boolean hasSawmill = false;
+        boolean hasWoodWall = false;
+        for (Game.Building b : s.buildings) {
+            if ("sawmill".equals(b.type)) hasSawmill = true;
+            if ("wood_wall".equals(b.type)) hasWoodWall = true;
+        }
+        assertTrue(hasSawmill, "Nel bosco è presente la Segheria runica");
+        assertTrue(hasWoodWall, "Nel bosco è presente la Barricata di tronchi");
+
+        // Raccolta tronchi e lavorazione in assi
+        s.interact("mine");
+        assertEquals(s.ball.ore, 1, "Raccolto 1 tronco grezzo");
+        s.interact("sawmill");
+        assertEquals(s.ball.ore, 0, "Tronchi grezzi azzerati dopo taglio");
+        assertEquals(s.ball.metal, 1, "1 asse di legname ricavata");
+
+        // Deposito legname
+        s.interact("depot");
+        assertEquals(s.delivered, 1, "1 legname consegnato");
+        assertEquals(s.ball.metal, 0, "Sfera vuota");
+
+        // Ondata bosco: generazione ragni e bestie silvane
+        s.startWave();
+        boolean hasSpider = false;
+        for (Game.Enemy e : s.enemies) {
+            if ("spider".equals(e.type)) hasSpider = true;
+        }
+        assertTrue(hasSpider, "Nell'ondata del bosco compaiono i ragni delle radici");
+
+        // Ritorno all'Avamposto con accredito Legname
+        s.returnToHub();
+        assertEquals(s.screen, "hub", "Ritorno all'Avamposto");
+        assertEquals(s.clanWood, 1, "Legname accreditato al Clan");
+        System.out.println("✔ La spedizione nel Bosco dei Nani implementa correttamente legname, segheria, funghi e ragni");
     }
 }

@@ -2,29 +2,31 @@
 
 Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, progettato da zero per essere giocato in **orientamento verticale (portrait)** su smartphone con una sola mano.
 
-**[Scarica la Release v0.9.4 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.4)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
+**[Scarica la Release v0.9.5 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.5)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
 
 ---
 
-## Panoramica del Gioco (Ambientazione Fantasy Nanico)
+## Panoramica del Gioco (Ambientazione Fantasy Nanico & Biomi Multipli)
 
-*Ferro e Rimbalzi* unisce il dinamismo del Breakout / flipper con un'economia tattica di estrazione mineraria, forgiatura e difesa dall'assedio goblin:
+*Ferro e Rimbalzi* unisce il dinamismo del Breakout / flipper con un'economia tattica di spedizioni, estrazione mineraria, segheria silvana e difesa dall'assedio di mostri:
 
-1. **Miniera di Ferro e Roccia (Settore Superiore)**:
-   * 3 giacimenti montani nella roccia viva rilasciano minerale grezzo e schegge quando percossi dalla sfera runica.
-2. **Forgia e Forziere Reale (Settore Mediano)**:
-   * **Grande Fucina Nanica**: puoi aprirla o chiuderla. Aperta, accoglie la sfera nel crogiolo e fonde istantaneamente il minerale in **ferro raffinato**. Chiusa, il portone borchiato funge da sponda riflettente.
-   * **Forziere del Regno**: quando la sfera carica di ferro entra nel forziere, incassa il ferro per erigere difese e finanziare la spedizione.
-3. **Assedio dei Goblin e Minaccia alle Barricate**:
-   * Orde di goblin invasori con elmi cornuti e ladri koboldi furtivi scendono lungo la galleria. Se toccano la **palizzata**, sottraggono integrità alla rocca nanica.
-   * **Carico Armato**: infiamma la sfera con il fuoco del drago, sacrificando ferro o minerale per triplicare i danni all'impatto con i mostri!
-   * **Richiamo dello Scudo**: richiama tempestivamente la sfera sullo scudo torre per mettere in salvo il carico (ricarica: 12 secondi).
-4. **Cantiere dei Fabbri e Artefatti Runici**:
-   * Trascina le strutture per creare percorsi di rimbalzo micidiali.
-   * Spendi il ferro incassato per erigere **Mura in Pietra (3 Fe)** o **Baliste a Ripetizione (7 Fe)** che scagliano dardi infuocati automatici.
-   * Scegli tra 3 artefatti runici ad ogni ondata respinta: **Bisaccia Rinforzata** (+2 capienza), **Scudo Torre Maggiorato** (+20px e +1 cuore), **Incanto Runico** (+1 danno).
-5. **Obiettivo**:
-   * Resistere a 5 ondate di assedio e consegnare almeno **14 lingotti di ferro** al forziere reale.
+### 1. Avamposto dei Nani (Hub & Progressione Basi)
+* **Sala delle Spedizioni**: seleziona la missione tra i biomi sbloccati.
+* **Scorte della Rocca**: accumula Ferro (`Fe`) e Legname per sbloccare nuovi territori nanici e potenziare le difese.
+
+### 2. Bioma Miniera di Ferro (Miniera Superiore)
+* 3 giacimenti di roccia viva per estrarre minerale di ferro.
+* **Grande Fucina Nanica**: fonde il minerale in ferro raffinato spendibile.
+* **Forziere del Regno**: deposita i lingotti per finanziare la rocca.
+* Invasori: Goblin guerrieri e Ladri Koboldi.
+
+### 3. Bioma Bosco dei Nani (Fase 2)
+* Sbloccabile con 14 Ferro dalle riserve del Clan.
+* **Ceppi di Alberi Antichi**: abbatti la corteccia per raccogliere tronchi di legname pregiato.
+* **Segheria Meccanica Runica**: lama dentata d'acciaio rotante che taglia i tronchi in assi rinforzate.
+* **Funghi Elastici (Bouncers)**: respingenti naturali fluorescenti che imprimono una vigorosa spinta elastica (+10% velocita) e rilasciano spore luminescenti.
+* **Barricate di Tronchi & Baliste Silvane**: difese veloci da erigere per 3 Legno.
+* **Ragni delle Radici & Bestie Silvane**: nemici agili con movimento serpeggiante sinusoidale.
 
 ---
 

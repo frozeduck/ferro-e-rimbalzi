@@ -51,6 +51,19 @@ PAL = {
     'ruby_dark': (110, 16, 36, 255),
     'ruby_mid': (180, 28, 54, 255),
     'ruby_light': (238, 70, 88, 255),
+    'moss_dark': (20, 52, 28, 255),
+    'moss_mid': (38, 92, 46, 255),
+    'moss_light': (68, 148, 72, 255),
+    'moss_high': (124, 204, 110, 255),
+    'leaf_emerald': (40, 180, 100, 255),
+    'wood_bark': (48, 26, 18, 255),
+    'shroom_dark': (80, 22, 68, 255),
+    'shroom_mid': (150, 38, 105, 255),
+    'shroom_light': (215, 65, 150, 255),
+    'shroom_spore': (90, 230, 200, 255),
+    'spider_body': (28, 20, 36, 255),
+    'spider_leg': (54, 38, 68, 255),
+    'spider_eye': (235, 32, 60, 255),
 }
 
 
@@ -665,6 +678,362 @@ def gen_pixel_caverna_sfondo():
     print('Pixel art generata: sfondo_caverna.png (540x960)')
 
 
+def gen_pixel_foresta_sfondo():
+    """Sfondo foresta nanica 16-bit: lastre di pietra muschiata, radici millenarie e lanterne silvane runiche."""
+    w, h = 135, 240
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Muro e suolo in lastroni di roccia coperti di muschio scuro
+    block_h = 10
+    block_w = 16
+    for y in range(h):
+        row = y // block_h
+        is_mortar_y = (y % block_h == 0)
+        shift = 8 if row % 2 == 1 else 0
+        for x in range(w):
+            is_mortar_x = ((x + shift) % block_w == 0)
+            if is_mortar_y or is_mortar_x:
+                pix[x, y] = PAL['black']
+            else:
+                # Trama di muschio verde smeraldo scuro ditherato
+                r = (x * 7 + y * 13) % 29
+                if r < 4:
+                    pix[x, y] = PAL['moss_dark']
+                elif r < 14:
+                    pix[x, y] = PAL['stone_dark']
+                elif r < 23:
+                    pix[x, y] = PAL['moss_mid']
+                else:
+                    pix[x, y] = PAL['moss_light']
+
+    # Pilastri di tronchi secolari e radici intrecciate sui bordi laterali
+    for y in range(h):
+        for x in range(12):
+            if x == 0 or x == 11:
+                pix[x, y] = PAL['black']
+            elif x < 5:
+                pix[x, y] = PAL['wood_mid'] if (x + y) % 3 == 0 else PAL['wood_bark']
+            else:
+                pix[x, y] = PAL['wood_bark'] if (x + y) % 2 == 0 else PAL['wood_dark']
+        for x in range(w - 12, w):
+            if x == w - 12 or x == w - 1:
+                pix[x, y] = PAL['black']
+            elif x < w - 5:
+                pix[x, y] = PAL['wood_bark'] if (x + y) % 2 == 0 else PAL['wood_dark']
+            else:
+                pix[x, y] = PAL['wood_mid'] if (x + y) % 3 == 0 else PAL['wood_bark']
+
+    # Lanterne silvane runiche a parete (luce smeraldo/spora magica)
+    for tx, ty in [(20, 60), (w - 20, 60), (20, 150), (w - 20, 150)]:
+        # Supporto intagliato in ferro
+        pix[tx, ty + 2] = PAL['iron_light']
+        pix[tx, ty + 3] = PAL['iron_dark']
+        # Gemma runica silvana luminosa
+        pix[tx, ty] = PAL['gem_cyan_white']
+        pix[tx - 1, ty] = PAL['moss_high']
+        pix[tx + 1, ty] = PAL['moss_high']
+        pix[tx, ty - 1] = PAL['shroom_spore']
+        pix[tx, ty - 2] = PAL['leaf_emerald']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sfondo_foresta.png')
+    print('Pixel art generata: sfondo_foresta.png (540x960)')
+
+
+def gen_pixel_albero():
+    """Ceppo di Albero Antico nanico (192x144): corteccia nodosa, muschio, anelli concentrici e rune dorate."""
+    w, h = 48, 36
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Sagoma tronco/ceppo massiccio
+    for y in range(6, 34):
+        left = 6 + int((34 - y) * 0.3) + (y % 2)
+        right = 42 - int((34 - y) * 0.25) - ((y + 1) % 2)
+        for x in range(left, right):
+            if x == left or x == right - 1 or y == 33:
+                pix[x, y] = PAL['black']
+            elif y < 14:
+                # Superficie di taglio con anelli di crescita in legno
+                dist_center = abs(x - 24) + abs(y - 10) * 1.5
+                if dist_center < 4:
+                    pix[x, y] = PAL['gold_light']
+                elif int(dist_center) in (6, 7, 12, 13):
+                    pix[x, y] = PAL['wood_dark']
+                elif int(dist_center) in (8, 9, 14, 15):
+                    pix[x, y] = PAL['wood_light']
+                else:
+                    pix[x, y] = PAL['wood_mid']
+            else:
+                # Corteccia esterna nodosa e ditherata
+                if (x + y * 2) % 7 == 0:
+                    pix[x, y] = PAL['moss_mid']
+                elif (x + y) % 5 == 0:
+                    pix[x, y] = PAL['wood_bark']
+                elif x < left + 6:
+                    pix[x, y] = PAL['wood_shadow'] if (x + y) % 2 == 0 else PAL['wood_dark']
+                else:
+                    pix[x, y] = PAL['wood_dark'] if (x + y) % 2 == 0 else PAL['wood_mid']
+
+    # Bordo superiore del taglio
+    for x in range(8, 40):
+        pix[x, 5] = PAL['black']
+        pix[x, 6] = PAL['wood_bark']
+
+    # Muschio e rampicanti alla base
+    for x in range(8, 40):
+        if (x * 3) % 4 == 0:
+            pix[x, 32] = PAL['moss_light']
+            pix[x, 31] = PAL['moss_mid']
+            pix[x, 30] = PAL['moss_dark']
+
+    # Rune naniche dorate incise sulla corteccia
+    runes = [(20, 20), (21, 21), (22, 22), (23, 21), (24, 20), (28, 22), (28, 23), (28, 24)]
+    for rx, ry in runes:
+        pix[rx, ry] = PAL['leaf_emerald']
+        pix[rx + 1, ry] = PAL['moss_high']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_albero.png')
+    print('Pixel art generata: sprite_albero.png (192x144)')
+
+
+def gen_pixel_segheria():
+    """Segheria runica nanica (192x128): telaio in legno e ferro, lama circolare d'acciaio dorato rotante."""
+    w, h = 48, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Struttura in pietra e travi alla base
+    for y in range(4, 30):
+        for x in range(4, 44):
+            if x in (4, 43) or y in (4, 29):
+                pix[x, y] = PAL['black']
+            elif y >= 22:
+                # Basamento in granito
+                pix[x, y] = PAL['stone_mid'] if (x + y) % 2 == 0 else PAL['stone_dark']
+            else:
+                # Tetto e pareti in travi di legno massiccio
+                pix[x, y] = PAL['wood_bark'] if (x + y) % 3 == 0 else PAL['wood_mid']
+
+    # Tetto spiovente
+    for x in range(3, 45):
+        pix[x, 3] = PAL['black']
+        pix[x, 4] = PAL['wood_light']
+
+    # Apertura centrale di taglio (vano lama)
+    for y in range(12, 26):
+        for x in range(16, 32):
+            pix[x, y] = PAL['black']
+
+    # Tronco che entra a sinistra
+    for y in range(18, 23):
+        for x in range(8, 20):
+            pix[x, y] = PAL['wood_light'] if y == 19 else PAL['wood_mid']
+
+    # Tronco/assi lavorate che escono a destra
+    for y in range(19, 23):
+        for x in range(28, 40):
+            pix[x, y] = PAL['gold_mid'] if y == 20 else PAL['wood_light']
+
+    # Grande disco/lama circolare dentata centrale
+    cx, cy = 24, 18
+    for dy in range(-7, 8):
+        for dx in range(-7, 8):
+            d2 = dx * dx + dy * dy
+            if d2 <= 49:
+                x = cx + dx
+                y = cy + dy
+                if 40 <= d2 <= 49:
+                    # Denti della sega
+                    pix[x, y] = PAL['iron_white'] if (dx + dy) % 2 == 0 else PAL['black']
+                elif d2 <= 6:
+                    # Mozzo centrale in oro
+                    pix[x, y] = PAL['gold_light']
+                else:
+                    # Disco d'acciaio lucido
+                    pix[x, y] = PAL['iron_light'] if dx > 0 else PAL['iron_mid']
+
+    # Canna fumaria / camino a vapore a sinistra
+    for y in range(0, 5):
+        for x in range(8, 12):
+            pix[x, y] = PAL['iron_dark'] if x == 8 or x == 11 else PAL['iron_light']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_segheria.png')
+    print('Pixel art generata: sprite_segheria.png (192x128)')
+
+
+def gen_pixel_ragno():
+    """Ragno silvano delle radici 16-bit (96x96): carapace scuro, 8 zampe ricurve e occhi rubino luminosi."""
+    w, h = 24, 24
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    cx, cy = 12, 12
+
+    # Addome posteriore (ovale superiore)
+    for dy in range(-6, 2):
+        for dx in range(-5, 6):
+            if dx * dx * 1.3 + dy * dy * 1.1 <= 22:
+                x = cx + dx
+                y = cy + dy - 2
+                if dx * dx * 1.3 + dy * dy * 1.1 >= 18:
+                    pix[x, y] = PAL['black']
+                else:
+                    pix[x, y] = PAL['shroom_mid'] if (dx + dy) % 2 == 0 else PAL['spider_body']
+
+    # Cefalotorace (corpo centrale)
+    for dy in range(-2, 5):
+        for dx in range(-4, 5):
+            if dx * dx + dy * dy <= 14:
+                x = cx + dx
+                y = cy + dy + 2
+                if dx * dx + dy * dy >= 10:
+                    pix[x, y] = PAL['black']
+                else:
+                    pix[x, y] = PAL['spider_leg'] if dx == 0 else PAL['spider_body']
+
+    # Occhi rubino scintillanti
+    pix[cx - 2, cy + 3] = PAL['spider_eye']
+    pix[cx - 1, cy + 3] = PAL['ruby_light']
+    pix[cx + 1, cy + 3] = PAL['ruby_light']
+    pix[cx + 2, cy + 3] = PAL['spider_eye']
+    pix[cx - 1, cy + 2] = PAL['fire_yellow']
+    pix[cx + 1, cy + 2] = PAL['fire_yellow']
+
+    # Mandibole/cheliceri
+    pix[cx - 2, cy + 5] = PAL['iron_light']
+    pix[cx - 2, cy + 6] = PAL['black']
+    pix[cx + 2, cy + 5] = PAL['iron_light']
+    pix[cx + 2, cy + 6] = PAL['black']
+
+    # 8 zampe snodate (4 a sinistra, 4 a destra)
+    leg_paths = [
+        # Zampe sinistre
+        [(cx - 4, cy - 2), (cx - 7, cy - 5), (cx - 10, cy - 3)],
+        [(cx - 4, cy), (cx - 8, cy - 2), (cx - 11, cy + 1)],
+        [(cx - 4, cy + 2), (cx - 8, cy + 3), (cx - 11, cy + 6)],
+        [(cx - 3, cy + 4), (cx - 6, cy + 7), (cx - 9, cy + 10)],
+        # Zampe destre
+        [(cx + 4, cy - 2), (cx + 7, cy - 5), (cx + 10, cy - 3)],
+        [(cx + 4, cy), (cx + 8, cy - 2), (cx + 11, cy + 1)],
+        [(cx + 4, cy + 2), (cx + 8, cy + 3), (cx + 11, cy + 6)],
+        [(cx + 3, cy + 4), (cx + 6, cy + 7), (cx + 9, cy + 10)],
+    ]
+    for leg in leg_paths:
+        for lx, ly in leg:
+            if 0 <= lx < w and 0 <= ly < h:
+                pix[lx, ly] = PAL['spider_leg']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_ragno.png')
+    print('Pixel art generata: sprite_ragno.png (96x96)')
+
+
+def gen_pixel_fungo():
+    """Fungo elastico bouncer (96x96): cappello luminescente viola/magenta a pois turchesi con fusto flessibile."""
+    w, h = 24, 24
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    cx, cy = 12, 10
+
+    # Gambo spesso
+    for y in range(12, 22):
+        gw = 3 + int((y - 12) * 0.4)
+        for x in range(cx - gw, cx + gw + 1):
+            if x in (cx - gw, cx + gw) or y == 21:
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['wood_light'] if x < cx else PAL['shroom_spore']
+
+    # Cappello a cupola carnoso
+    for dy in range(-7, 4):
+        for dx in range(-10, 11):
+            if dx * dx * 0.6 + dy * dy * 1.8 <= 32:
+                x = cx + dx
+                y = cy + dy
+                if dx * dx * 0.6 + dy * dy * 1.8 >= 26:
+                    pix[x, y] = PAL['black']
+                else:
+                    pix[x, y] = PAL['shroom_mid'] if dy > 0 else PAL['shroom_light']
+
+    # Pois fluorescenti luminescenti sul cappello
+    dots = [(-5, -2), (0, -4), (5, -2), (-2, 0), (3, 1)]
+    for dx, dy in dots:
+        pix[cx + dx, cy + dy] = PAL['shroom_spore']
+        pix[cx + dx + 1, cy + dy] = PAL['gem_cyan_white']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_fungo.png')
+    print('Pixel art generata: sprite_fungo.png (96x96)')
+
+
+def gen_pixel_muro_legno():
+    """Barricata di tronchi nanica (192x48): pali appuntiti verticali, traverse in ferro con chiodi e corde."""
+    w, h = 48, 12
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # 6 Pali verticali di legno appuntito
+    for p in range(6):
+        px = p * 8
+        # Punta del palo
+        pix[px + 3, 0] = PAL['black']
+        pix[px + 4, 0] = PAL['black']
+        for y in range(1, 3):
+            pix[px + 3 - y, y] = PAL['black']
+            pix[px + 4 + y, y] = PAL['black']
+            for x in range(px + 4 - y, px + 4 + y):
+                pix[x, y] = PAL['wood_light']
+        # Fusto del palo
+        for y in range(3, 12):
+            for x in range(px, px + 8):
+                if x == px or x == px + 7 or y == 11:
+                    pix[x, y] = PAL['black']
+                elif x in (px + 1, px + 2):
+                    pix[x, y] = PAL['wood_mid']
+                elif x in (px + 3, px + 4):
+                    pix[x, y] = PAL['wood_light']
+                else:
+                    pix[x, y] = PAL['wood_dark']
+
+    # Due fasce di ferro orizzontali di rinforzo
+    for y in (4, 8):
+        for x in range(w):
+            if pix[x, y] != PAL['void']:
+                pix[x, y] = PAL['iron_light'] if x % 8 in (3, 4) else PAL['iron_dark']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_muro_legno.png')
+    print('Pixel art generata: sprite_muro_legno.png (192x48)')
+
+
+def gen_pixel_legno():
+    """Ciocco di legname nanico (64x64): tronco con corteccia e taglio d'accetta."""
+    w, h = 16, 16
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    for y in range(3, 13):
+        for x in range(3, 13):
+            if x in (3, 12) or y in (3, 12):
+                pix[x, y] = PAL['black']
+            elif x < 7:
+                pix[x, y] = PAL['wood_bark']
+            elif x == 7:
+                pix[x, y] = PAL['wood_dark']
+            else:
+                dist = abs(x - 10) + abs(y - 8)
+                pix[x, y] = PAL['gold_light'] if dist < 2 else PAL['wood_light']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_legno.png')
+    print('Pixel art generata: sprite_legno.png (64x64)')
+
+
 if __name__ == '__main__':
     print('=== Inizio generazione Asset TRUE PIXEL ART (16-bit / 32-bit) ===')
     gen_pixel_miniera()
@@ -677,4 +1046,12 @@ if __name__ == '__main__':
     gen_pixel_sfera()
     gen_pixel_goblin()
     gen_pixel_caverna_sfondo()
+    # Nuovi Sprite Foresta dei Nani (Fase 2)
+    gen_pixel_foresta_sfondo()
+    gen_pixel_albero()
+    gen_pixel_segheria()
+    gen_pixel_ragno()
+    gen_pixel_fungo()
+    gen_pixel_muro_legno()
+    gen_pixel_legno()
     print('=== Tutti gli sprite 16-bit Pixel Art generati con successo! ===')
