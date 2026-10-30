@@ -1,6 +1,8 @@
 package eu.sabotino.ferrorimbalzi;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
@@ -42,6 +44,18 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private float trauma = 0f;
     private float ballSquashX = 1f;
     private float ballSquashY = 1f;
+
+    // Texture e Sprite Grafici Fantasy Nanici
+    private Bitmap bmpMine;
+    private Bitmap bmpForgeOpen;
+    private Bitmap bmpForgeClosed;
+    private Bitmap bmpVault;
+    private Bitmap bmpWall;
+    private Bitmap bmpTurret;
+    private Bitmap bmpShield;
+    private Bitmap bmpOrb;
+    private Bitmap bmpGoblin;
+    private Bitmap bmpBg;
 
     // Atmosfera sotterranea: Faville della forgia e pulviscolo di miniera
     private static class Sparkle {
@@ -101,19 +115,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         super(context);
         holder = getHolder();
         holder.addCallback(this);
-        init();
+        init(context);
     }
 
     public GameView(Context context, AttributeSet attrs) {
         super(context, attrs);
         holder = getHolder();
         holder.addCallback(this);
-        init();
+        init(context);
     }
 
-    private void init() {
+    private void init(Context context) {
         game = new Game();
         lastHp = game.hp;
+        loadBitmaps(context);
 
         // Inizializza faville e pulviscolo di caverna
         for (int i = 0; i < sparkles.length; i++) {
@@ -128,6 +143,24 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         // Inizializza pool particelle
         for (int i = 0; i < particles.length; i++) {
             particles[i] = new Particle();
+        }
+    }
+
+    private void loadBitmaps(Context context) {
+        try {
+            android.content.res.Resources res = context.getResources();
+            bmpMine = BitmapFactory.decodeResource(res, R.drawable.sprite_miniera);
+            bmpForgeOpen = BitmapFactory.decodeResource(res, R.drawable.sprite_forgia_aperta);
+            bmpForgeClosed = BitmapFactory.decodeResource(res, R.drawable.sprite_forgia_chiusa);
+            bmpVault = BitmapFactory.decodeResource(res, R.drawable.sprite_forziere);
+            bmpWall = BitmapFactory.decodeResource(res, R.drawable.sprite_muro);
+            bmpTurret = BitmapFactory.decodeResource(res, R.drawable.sprite_balista);
+            bmpShield = BitmapFactory.decodeResource(res, R.drawable.sprite_scudo);
+            bmpOrb = BitmapFactory.decodeResource(res, R.drawable.sprite_sfera);
+            bmpGoblin = BitmapFactory.decodeResource(res, R.drawable.sprite_goblin);
+            bmpBg = BitmapFactory.decodeResource(res, R.drawable.sfondo_caverna);
+        } catch (Throwable t) {
+            android.util.Log.e("GameView", "Failed to load bitmaps", t);
         }
     }
 
@@ -571,17 +604,22 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     // ==========================================
 
     private void drawGame(Canvas canvas, float dt) {
-        // Pietra scura della caverna sotterranea a pieno schermo
-        paintFill.setStyle(Paint.Style.FILL);
+        // Pavimento in pietra e atmosfera di rocca nanica a pieno schermo
         float bgW = getWidth() > 0 ? (float) getWidth() : Game.W;
         float bgH = getHeight() > 0 ? (float) getHeight() : virtualH;
-        if (bgH > 10f) {
-            paintFill.setShader(new LinearGradient(0f, 0f, 0f, bgH, 0xFF140C09, 0xFF24150F, Shader.TileMode.CLAMP));
+        if (bmpBg != null) {
+            tempRect.set(0f, 0f, bgW, bgH);
+            canvas.drawBitmap(bmpBg, null, tempRect, null);
         } else {
-            paintFill.setColor(0xFF140C09);
+            paintFill.setStyle(Paint.Style.FILL);
+            if (bgH > 10f) {
+                paintFill.setShader(new LinearGradient(0f, 0f, 0f, bgH, 0xFF140C09, 0xFF24150F, Shader.TileMode.CLAMP));
+            } else {
+                paintFill.setColor(0xFF140C09);
+            }
+            canvas.drawRect(0f, 0f, bgW, bgH, paintFill);
+            paintFill.setShader(null);
         }
-        canvas.drawRect(0f, 0f, bgW, bgH, paintFill);
-        paintFill.setShader(null);
 
         canvas.save();
 
@@ -752,377 +790,92 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawOreVein(Canvas canvas, Game.Mine m, int index) {
+        tempRect.set(m.x, m.y, m.x + m.w, m.y + m.h);
+        if (bmpMine != null) {
+            canvas.drawBitmap(bmpMine, null, tempRect, null);
+        } else {
+            paintFill.setStyle(Paint.Style.FILL);
+            paintFill.setColor(0xFF2D241E);
+            canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+        }
+
         boolean flash = (game.elapsed - game.hits.getOrDefault("mine" + index, -10f)) < 0.18f;
-
-        // Roccia viva montuosa frastagliata
-        rockPath.reset();
-        rockPath.moveTo(m.x + 8f, m.y);
-        rockPath.lineTo(m.x + m.w - 12f, m.y + 4f);
-        rockPath.lineTo(m.x + m.w, m.y + 16f);
-        rockPath.lineTo(m.x + m.w - 10f, m.y + m.h - 4f);
-        rockPath.lineTo(m.x + m.w - 30f, m.y + m.h);
-        rockPath.lineTo(m.x + 12f, m.y + m.h - 2f);
-        rockPath.lineTo(m.x, m.y + m.h - 14f);
-        rockPath.lineTo(m.x + 4f, m.y + 12f);
-        rockPath.close();
-
-        paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(flash ? 0xFFF59E0B : 0xFF2D241E);
-        canvas.drawPath(rockPath, paintFill);
-
-        paintStroke.setStyle(Paint.Style.STROKE);
-        paintStroke.setStrokeWidth(2f);
-        paintStroke.setColor(flash ? 0xFFFEF3C7 : 0xFF4D3B32);
-        canvas.drawPath(rockPath, paintStroke);
-
-        // Crepe nella roccia viva
-        paintStroke.setStrokeWidth(1.2f);
-        paintStroke.setColor(0xFF1F1814);
-        canvas.drawLine(m.x + 15f, m.y + 8f, m.x + 35f, m.y + 22f, paintStroke);
-        canvas.drawLine(m.x + m.w - 20f, m.y + 10f, m.x + m.w - 40f, m.y + 28f, paintStroke);
-
-        // Vene minerarie luminose con cristalli
-        float pulse = (float) (Math.sin(game.elapsed * 4f + index) * 0.35 + 0.65);
-        paintStroke.setColor(flash ? 0xFFFFFFFF : Color.argb((int) (240 * pulse), 245, 158, 11));
-        paintStroke.setStrokeWidth(2.5f);
-
-        canvas.drawLine(m.x + 22f, m.y + 14f, m.x + 48f, m.y + 26f, paintStroke);
-        canvas.drawLine(m.x + 48f, m.y + 26f, m.x + 72f, m.y + 16f, paintStroke);
-        canvas.drawLine(m.x + 72f, m.y + 16f, m.x + 108f, m.y + 30f, paintStroke);
-
-        // Cristalli poligonali sfaccettati
-        paintFill.setColor(Color.argb((int) (245 * pulse), 253, 224, 71));
-        drawFacetedGem(canvas, m.x + 30f, m.y + 18f, 5.5f);
-        drawFacetedGem(canvas, m.x + 58f, m.y + 22f, 6.5f);
-        drawFacetedGem(canvas, m.x + 90f, m.y + 18f, 5.5f);
-        drawFacetedGem(canvas, m.x + 104f, m.y + 28f, 4.5f);
-
-        // Icona visiva centrale: Picconi da minatore incrociati
-        float cx = m.x + m.w / 2f;
-        float cy = m.y + m.h / 2f + 1f;
-
-        paintStroke.setStrokeWidth(2f);
-        paintStroke.setColor(0xFF78350F);
-        canvas.drawLine(cx - 12f, cy + 10f, cx + 12f, cy - 10f, paintStroke);
-        canvas.drawLine(cx + 12f, cy + 10f, cx - 12f, cy - 10f, paintStroke);
-
-        paintStroke.setStrokeWidth(2.5f);
-        paintStroke.setColor(0xFFE7E5E4);
-        canvas.drawLine(cx + 7f, cy - 13f, cx + 15f, cy - 7f, paintStroke);
-        canvas.drawLine(cx - 7f, cy - 13f, cx - 15f, cy - 7f, paintStroke);
-    }
-
-    private void drawFacetedGem(Canvas canvas, float gx, float gy, float r) {
-        rockPath.reset();
-        rockPath.moveTo(gx, gy - r);
-        rockPath.lineTo(gx + r, gy - r * 0.3f);
-        rockPath.lineTo(gx + r * 0.7f, gy + r);
-        rockPath.lineTo(gx - r * 0.7f, gy + r);
-        rockPath.lineTo(gx - r, gy - r * 0.3f);
-        rockPath.close();
-        canvas.drawPath(rockPath, paintFill);
-        paintStroke.setStyle(Paint.Style.STROKE);
-        paintStroke.setStrokeWidth(1f);
-        paintStroke.setColor(0xFFFEF08A);
-        canvas.drawPath(rockPath, paintStroke);
-        paintFill.setStyle(Paint.Style.FILL);
+        if (flash) {
+            paintStroke.setStyle(Paint.Style.STROKE);
+            paintStroke.setStrokeWidth(3f);
+            paintStroke.setColor(0xFFFEF3C7);
+            canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
+        }
     }
 
     private void drawBuilding(Canvas canvas, Game.Building b) {
         tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
 
         if ("wall".equals(b.type)) {
-            paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF383532);
-            canvas.drawRoundRect(tempRect, 3f, 3f, paintFill);
-
-            paintStroke.setStyle(Paint.Style.STROKE);
-            paintStroke.setStrokeWidth(1.2f);
-            paintStroke.setColor(0xFF201D1A);
-            float rowH = b.h / 2f;
-            canvas.drawLine(b.x, b.y + rowH, b.x + b.w, b.y + rowH, paintStroke);
-            for (float mx = b.x + 20f; mx < b.x + b.w - 5f; mx += 26f) {
-                canvas.drawLine(mx, b.y, mx, b.y + rowH, paintStroke);
-                canvas.drawLine(mx - 13f, b.y + rowH, mx - 13f, b.y + b.h, paintStroke);
-            }
-
-            paintFill.setColor(0xFF262320);
-            for (float mx = b.x + 4f; mx < b.x + b.w - 10f; mx += 20f) {
-                canvas.drawRect(mx, b.y, mx + 10f, b.y + 4.5f, paintFill);
-            }
-
-            paintStroke.setColor(0xFF78716C);
-            paintStroke.setStrokeWidth(1.8f);
-            canvas.drawRoundRect(tempRect, 3f, 3f, paintStroke);
-
-            float cx = b.x + b.w / 2f;
-            float cy = b.y + b.h / 2f;
-            paintFill.setColor(0xFFF59E0B);
-            rockPath.reset();
-            rockPath.moveTo(cx - 7f, cy - 6f);
-            rockPath.lineTo(cx + 7f, cy - 6f);
-            rockPath.lineTo(cx + 7f, cy);
-            rockPath.lineTo(cx, cy + 7f);
-            rockPath.lineTo(cx - 7f, cy);
-            rockPath.close();
-            canvas.drawPath(rockPath, paintFill);
-            paintFill.setColor(0xFF78350F);
-            canvas.drawCircle(cx, cy - 1f, 2.5f, paintFill);
-
-        } else if ("forge".equals(b.type)) {
-            paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF1C1917);
-            canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
-
-            paintFill.setColor(0xFF292524);
-            canvas.drawRect(b.x + 18f, b.y - 7f, b.x + 32f, b.y, paintFill);
-            canvas.drawRect(b.x + b.w - 32f, b.y - 7f, b.x + b.w - 18f, b.y, paintFill);
-            if (game.forgeOpen) {
-                paintFill.setColor(0xFFFF7A00);
-                canvas.drawCircle(b.x + 25f, b.y - 8f, 2.5f, paintFill);
-                canvas.drawCircle(b.x + b.w - 25f, b.y - 8f, 2.5f, paintFill);
-            }
-
-            tempRect.set(b.x + 10f, b.y + 10f, b.x + b.w - 10f, b.y + b.h - 8f);
-
-            if (game.forgeOpen) {
-                paintFill.setShader(new LinearGradient(b.x, b.y + 10f, b.x, Math.max(b.y + 11f, b.y + b.h),
-                        0xFFFF3300, 0xFFFFCC00, Shader.TileMode.CLAMP));
-                canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
-                paintFill.setShader(null);
-
-                float cx = b.x + b.w / 2f;
-                float cy = b.y + b.h / 2f + 2f;
-                paintFill.setColor(0xFF140F0D);
-                canvas.drawRect(cx - 16f, cy + 6f, cx + 16f, cy + 12f, paintFill);
-                canvas.drawRect(cx - 10f, cy, cx + 10f, cy + 6f, paintFill);
-                canvas.drawRect(cx - 14f, cy - 6f, cx + 12f, cy, paintFill);
-                rockPath.reset();
-                rockPath.moveTo(cx + 12f, cy - 6f);
-                rockPath.lineTo(cx + 22f, cy - 2f);
-                rockPath.lineTo(cx + 12f, cy);
-                rockPath.close();
-                canvas.drawPath(rockPath, paintFill);
-
-                paintStroke.setColor(0xFFF59E0B);
-                paintStroke.setStrokeWidth(2f);
-                canvas.drawLine(cx - 10f, cy - 8f, cx - 2f, cy - 14f, paintStroke);
-                paintFill.setColor(0xFFD6D3D1);
-                canvas.drawRect(cx - 14f, cy - 11f, cx - 8f, cy - 6f, paintFill);
-
-                float anim = (game.elapsed * 40f) % 24f;
-                paintStroke.setColor(0x80FFFFFF);
-                paintStroke.setStrokeWidth(2f);
-                canvas.drawLine(b.x + 18f + anim, b.y + b.h / 2f - 4f, b.x + 24f + anim, b.y + b.h / 2f, paintStroke);
-                canvas.drawLine(b.x + 24f + anim, b.y + b.h / 2f, b.x + 18f + anim, b.y + b.h / 2f + 4f, paintStroke);
-                canvas.drawLine(b.x + b.w - 18f - anim, b.y + b.h / 2f - 4f, b.x - 24f - anim + b.w, b.y + b.h / 2f, paintStroke);
-                canvas.drawLine(b.x + b.w - 24f - anim, b.y + b.h / 2f, b.x - 18f - anim + b.w, b.y + b.h / 2f + 4f, paintStroke);
-
+            if (bmpWall != null) {
+                canvas.drawBitmap(bmpWall, null, tempRect, null);
             } else {
-                paintFill.setColor(0xFF452213);
-                canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
-
-                paintStroke.setColor(0xFF2C160C);
-                paintStroke.setStrokeWidth(1.5f);
-                for (float vx = b.x + 22f; vx < b.x + b.w - 15f; vx += 18f) {
-                    canvas.drawLine(vx, b.y + 10f, vx, b.y + b.h - 8f, paintStroke);
-                }
-
-                paintStroke.setColor(0xFF292524);
-                paintStroke.setStrokeWidth(3f);
-                canvas.drawLine(b.x + 14f, b.y + 12f, b.x + b.w - 14f, b.y + b.h - 10f, paintStroke);
-                canvas.drawLine(b.x + 14f, b.y + b.h - 10f, b.x + b.w - 14f, b.y + 12f, paintStroke);
-
-                float cx = b.x + b.w / 2f;
-                float cy = b.y + b.h / 2f;
-                paintStroke.setColor(0xFF78716C);
-                paintStroke.setStrokeWidth(2.5f);
-                canvas.drawCircle(cx, cy, 7f, paintStroke);
+                paintFill.setStyle(Paint.Style.FILL);
+                paintFill.setColor(0xFF383532);
+                canvas.drawRoundRect(tempRect, 3f, 3f, paintFill);
+            }
+        } else if ("forge".equals(b.type)) {
+            Bitmap fb = game.forgeOpen ? bmpForgeOpen : bmpForgeClosed;
+            if (fb != null) {
+                canvas.drawBitmap(fb, null, tempRect, null);
+            } else {
+                paintFill.setStyle(Paint.Style.FILL);
                 paintFill.setColor(0xFF1C1917);
-                canvas.drawRect(cx - 5f, cy + 3f, cx + 5f, cy + 12f, paintFill);
+                canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
             }
-
-            tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
-            paintStroke.setStyle(Paint.Style.STROKE);
-            paintStroke.setStrokeWidth(2.5f);
-            paintStroke.setColor(game.forgeOpen ? 0xFFF97316 : 0xFF78716C);
-            canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
-
-            paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFFD6D3D1);
-            canvas.drawCircle(b.x + 5f, b.y + 5f, 2f, paintFill);
-            canvas.drawCircle(b.x + b.w - 5f, b.y + 5f, 2f, paintFill);
-            canvas.drawCircle(b.x + 5f, b.y + b.h - 5f, 2f, paintFill);
-            canvas.drawCircle(b.x + b.w - 5f, b.y + b.h - 5f, 2f, paintFill);
-
-        } else if ("depot".equals(b.type)) {
-            paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF3B1A0A);
-            canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
-
-            paintFill.setColor(0xFF4D2411);
-            canvas.drawRoundRect(b.x, b.y, b.x + b.w, b.y + 18f, 6f, 6f, paintFill);
-
-            paintFill.setColor(0xFF262320);
-            canvas.drawRect(b.x + 16f, b.y, b.x + 28f, b.y + b.h, paintFill);
-            canvas.drawRect(b.x + b.w - 28f, b.y, b.x + b.w - 16f, b.y + b.h, paintFill);
-            canvas.drawRect(b.x + b.w / 2f - 6f, b.y, b.x + b.w / 2f + 6f, b.y + b.h, paintFill);
-
-            paintFill.setColor(0xFFFBBF24);
-            canvas.drawCircle(b.x + 22f, b.y + 8f, 2.5f, paintFill);
-            canvas.drawCircle(b.x + 22f, b.y + b.h - 10f, 2.5f, paintFill);
-            canvas.drawCircle(b.x + b.w - 22f, b.y + 8f, 2.5f, paintFill);
-            canvas.drawCircle(b.x + b.w - 22f, b.y + b.h - 10f, 2.5f, paintFill);
-
-            paintStroke.setStyle(Paint.Style.STROKE);
-            paintStroke.setStrokeWidth(2f);
-            paintStroke.setColor(0xFFF59E0B);
-            canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
-
-            float cx = b.x + b.w / 2f;
-            float cy = b.y + b.h / 2f + 4f;
-
-            paintFill.setColor(0xFFFBBF24);
-            canvas.drawRect(cx - 36f, cy - 2f, cx - 14f, cy + 7f, paintFill);
-            paintFill.setColor(0xFFD6D3D1);
-            canvas.drawRect(cx + 14f, cy - 2f, cx + 36f, cy + 7f, paintFill);
-
-            paintFill.setColor(0xFFFDE047);
-            canvas.drawCircle(cx - 26f, cy - 5f, 4f, paintFill);
-            canvas.drawCircle(cx - 18f, cy - 4f, 3.5f, paintFill);
-            canvas.drawCircle(cx + 22f, cy - 5f, 4f, paintFill);
-            canvas.drawCircle(cx + 30f, cy - 4f, 3.5f, paintFill);
-
-            paintFill.setColor(0xFFF59E0B);
-            canvas.drawCircle(cx, cy - 2f, 7f, paintFill);
-            paintFill.setColor(0xFF140C08);
-            canvas.drawCircle(cx, cy - 4f, 2.5f, paintFill);
-            canvas.drawRect(cx - 1.5f, cy - 4f, cx + 1.5f, cy + 3f, paintFill);
-
-            float anim = (game.elapsed * 35f) % 18f;
-            paintStroke.setColor(0x80FDE047);
-            paintStroke.setStrokeWidth(2f);
-            canvas.drawLine(cx - 8f, b.y + 4f + anim, cx, b.y + 11f + anim, paintStroke);
-            canvas.drawLine(cx, b.y + 11f + anim, cx + 8f, b.y + 4f + anim, paintStroke);
-
+        } else if ("vault".equals(b.type) || "depot".equals(b.type)) {
+            if (bmpVault != null) {
+                canvas.drawBitmap(bmpVault, null, tempRect, null);
+            } else {
+                paintFill.setStyle(Paint.Style.FILL);
+                paintFill.setColor(0xFF3B1A0A);
+                canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+            }
         } else if ("turret".equals(b.type)) {
-            float cx = b.x + b.w / 2f;
-            float cy = b.y + b.h / 2f;
-
-            paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF292524);
-            canvas.drawCircle(cx, cy, 22f, paintFill);
-
-            paintStroke.setStyle(Paint.Style.STROKE);
-            paintStroke.setStrokeWidth(2f);
-            paintStroke.setColor(0xFF78716C);
-            canvas.drawCircle(cx, cy, 22f, paintStroke);
-
-            paintStroke.setStrokeWidth(1f);
-            paintStroke.setColor(0x80F59E0B);
-            canvas.drawCircle(cx, cy, 17f, paintStroke);
-
-            Game.Enemy target = null;
-            double minDist = 300.0;
-            for (Game.Enemy e : game.enemies) {
-                if (e.hp > 0) {
-                    double d = Math.hypot(e.x - cx, e.y - cy);
-                    if (d < minDist) {
-                        minDist = d;
-                        target = e;
-                    }
-                }
+            if (bmpTurret != null) {
+                canvas.drawBitmap(bmpTurret, null, tempRect, null);
+            } else {
+                paintFill.setStyle(Paint.Style.FILL);
+                paintFill.setColor(0xFF292524);
+                canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
             }
-            float angle = target != null ? (float) Math.atan2(target.y - cy, target.x - cx) : (float) (-Math.PI / 2.0);
+        }
 
-            canvas.save();
-            canvas.translate(cx, cy);
-            canvas.rotate((float) Math.toDegrees(angle));
-
-            paintFill.setColor(0xFF78350F);
-            canvas.drawRect(-8f, -4f, 18f, 4f, paintFill);
-
-            paintStroke.setColor(0xFFD6D3D1);
+        // Bordo di selezione in cantiere
+        if ("build".equals(game.phase) && draggingBuilding == b) {
+            paintStroke.setStyle(Paint.Style.STROKE);
             paintStroke.setStrokeWidth(3f);
-            canvas.drawLine(10f, -18f, 16f, 0f, paintStroke);
-            canvas.drawLine(16f, 0f, 10f, 18f, paintStroke);
-
-            paintStroke.setColor(0xFFFEF3C7);
-            paintStroke.setStrokeWidth(1.2f);
-            canvas.drawLine(10f, -18f, -4f, 0f, paintStroke);
-            canvas.drawLine(-4f, 0f, 10f, 18f, paintStroke);
-
-            paintStroke.setColor(0xFFF59E0B);
-            paintStroke.setStrokeWidth(2.2f);
-            canvas.drawLine(-2f, 0f, 22f, 0f, paintStroke);
-            paintFill.setColor(0xFFE7E5E4);
-            canvas.drawCircle(22f, 0f, 3f, paintFill);
-
-            paintStroke.setColor(0xFFDC2626);
-            paintStroke.setStrokeWidth(1.5f);
-            canvas.drawLine(-2f, -3f, 2f, 0f, paintStroke);
-            canvas.drawLine(-2f, 3f, 2f, 0f, paintStroke);
-
-            paintFill.setColor(0xFFF59E0B);
-            canvas.drawCircle(0f, 0f, 4.5f, paintFill);
-
-            canvas.restore();
+            paintStroke.setColor(0xFFFBBF24);
+            canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
         }
     }
 
     private void drawMonster(Canvas canvas, Game.Enemy e) {
-        boolean thief = "thief".equals(e.type);
-
-        if (thief) {
-            goblinPath.reset();
-            goblinPath.moveTo(e.x + e.w / 2f, e.y + e.h);
-            goblinPath.lineTo(e.x + e.w, e.y + 6f);
-            goblinPath.lineTo(e.x + e.w - 6f, e.y);
-            goblinPath.lineTo(e.x + 6f, e.y);
-            goblinPath.lineTo(e.x, e.y + 6f);
-            goblinPath.close();
-
-            paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF334155);
-            canvas.drawPath(goblinPath, paintFill);
-
-            paintFill.setColor(0xFF92400E);
-            canvas.drawCircle(e.x + e.w - 8f, e.y + e.h - 6f, 6f, paintFill);
-
-            paintFill.setColor(0xFFFACC15);
-            canvas.drawCircle(e.x + e.w / 2f - 4f, e.y + 12f, 2.5f, paintFill);
-            canvas.drawCircle(e.x + e.w / 2f + 4f, e.y + 12f, 2.5f, paintFill);
-
+        tempRect.set(e.x, e.y, e.x + e.w, e.y + e.h);
+        if (bmpGoblin != null) {
+            canvas.drawBitmap(bmpGoblin, null, tempRect, null);
         } else {
-            goblinPath.reset();
-            goblinPath.moveTo(e.x + 6f, e.y + 8f);
-            goblinPath.lineTo(e.x + e.w - 6f, e.y + 8f);
-            goblinPath.lineTo(e.x + e.w, e.y + e.h - 6f);
-            goblinPath.lineTo(e.x + e.w / 2f, e.y + e.h);
-            goblinPath.lineTo(e.x, e.y + e.h - 6f);
-            goblinPath.close();
-
             paintFill.setStyle(Paint.Style.FILL);
             paintFill.setColor(0xFF16A34A);
-            canvas.drawPath(goblinPath, paintFill);
-
-            paintFill.setColor(0xFF57534E);
-            canvas.drawRect(e.x + 4f, e.y + 2f, e.x + e.w - 4f, e.y + 10f, paintFill);
-            paintStroke.setColor(0xFFE7E5E4);
-            paintStroke.setStrokeWidth(2f);
-            canvas.drawLine(e.x + 5f, e.y + 6f, e.x - 2f, e.y - 2f, paintStroke);
-            canvas.drawLine(e.x + e.w - 5f, e.y + 6f, e.x + e.w + 2f, e.y - 2f, paintStroke);
-
-            paintFill.setColor(0xFFDC2626);
-            canvas.drawCircle(e.x + e.w / 2f - 6f, e.y + 16f, 2.5f, paintFill);
-            canvas.drawCircle(e.x + e.w / 2f + 6f, e.y + 16f, 2.5f, paintFill);
+            canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
         }
 
-        float cellW = (e.w - 4f) / e.maxHp;
-        for (int k = 0; k < e.maxHp; k++) {
-            float cx = e.x + 2f + k * cellW;
-            paintFill.setColor(k < e.hp ? (thief ? 0xFFFACC15 : 0xFFDC2626) : 0xFF44403C);
-            canvas.drawRect(cx, e.y - 7f, cx + cellW - 2f, e.y - 3f, paintFill);
+        // Barra vita goblin se ferito
+        if (e.hp < e.maxHp) {
+            float barW = e.w * 0.9f;
+            float barH = 4f;
+            float bx = e.x + (e.w - barW) / 2f;
+            float by = e.y - 7f;
+            paintFill.setColor(0xFF7F1D1D);
+            canvas.drawRect(bx, by, bx + barW, by + barH, paintFill);
+            paintFill.setColor(0xFF22C55E);
+            float fillW = barW * ((float) e.hp / e.maxHp);
+            canvas.drawRect(bx, by, bx + fillW, by + barH, paintFill);
         }
     }
 
@@ -1130,35 +883,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         float px = game.paddle.x;
         float py = game.paddle.y;
         float pw = game.paddleWidth;
+        float ph = 24f;
 
-        shieldPath.reset();
-        shieldPath.moveTo(px - pw / 2f, py + 14f);
-        shieldPath.lineTo(px - pw / 2f + 12f, py);
-        shieldPath.lineTo(px + pw / 2f - 12f, py);
-        shieldPath.lineTo(px + pw / 2f, py + 14f);
-        shieldPath.lineTo(px + pw / 2f - 10f, py + 18f);
-        shieldPath.lineTo(px - pw / 2f + 10f, py + 18f);
-        shieldPath.close();
-
-        paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setShader(new LinearGradient(px, py, px, py + 18f, 0xFF78350F, 0xFF451A03, Shader.TileMode.CLAMP));
-        canvas.drawPath(shieldPath, paintFill);
-        paintFill.setShader(null);
-
-        paintStroke.setStyle(Paint.Style.STROKE);
-        paintStroke.setStrokeWidth(2f);
-        paintStroke.setColor(0xFFD6D3D1);
-        canvas.drawPath(shieldPath, paintStroke);
-
-        paintFill.setColor(0xFFF59E0B);
-        canvas.drawCircle(px, py + 8f, 7f, paintFill);
-        paintFill.setColor(0xFFFEF3C7);
-        canvas.drawCircle(px, py + 8f, 3.5f, paintFill);
-
-        paintStroke.setColor(0xFFFBBF24);
-        paintStroke.setStrokeWidth(1.5f);
-        canvas.drawLine(px - pw / 2f + 8f, py + 3f, px - pw / 2f + 16f, py + 12f, paintStroke);
-        canvas.drawLine(px + pw / 2f - 8f, py + 3f, px + pw / 2f - 16f, py + 12f, paintStroke);
+        tempRect.set(px - pw / 2f, py - 4f, px + pw / 2f, py + ph + 4f);
+        if (bmpShield != null) {
+            canvas.drawBitmap(bmpShield, null, tempRect, null);
+        } else {
+            paintFill.setStyle(Paint.Style.FILL);
+            paintFill.setColor(0xFF78350F);
+            canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+        }
     }
 
     private void drawRunicAim(Canvas canvas) {
@@ -1213,16 +947,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.drawCircle(0f, 0f, glowR, paintGlow);
         paintGlow.setShader(null);
 
-        paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(game.burn ? 0xFFFFD700 : 0xFFE7E5E4);
-        canvas.drawCircle(0f, 0f, game.ball.r, paintFill);
-
-        paintStroke.setStyle(Paint.Style.STROKE);
-        paintStroke.setStrokeWidth(1.2f);
-        paintStroke.setColor(game.burn ? 0xFFDC2626 : 0xFFD97706);
-        canvas.drawLine(0f, -game.ball.r * 0.6f, 0f, game.ball.r * 0.6f, paintStroke);
-        canvas.drawLine(0f, -game.ball.r * 0.2f, game.ball.r * 0.5f, -game.ball.r * 0.5f, paintStroke);
-        canvas.drawLine(0f, 0f, game.ball.r * 0.5f, game.ball.r * 0.3f, paintStroke);
+        tempRect.set(-game.ball.r * 1.25f, -game.ball.r * 1.25f, game.ball.r * 1.25f, game.ball.r * 1.25f);
+        if (bmpOrb != null) {
+            canvas.drawBitmap(bmpOrb, null, tempRect, null);
+        } else {
+            paintFill.setStyle(Paint.Style.FILL);
+            paintFill.setColor(game.burn ? 0xFFFFD700 : 0xFFE7E5E4);
+            canvas.drawCircle(0f, 0f, game.ball.r, paintFill);
+        }
 
         canvas.restore();
 
@@ -1537,60 +1269,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         float iconCx = x + iconBoxW / 2f;
         float iconCy = y + 62f;
 
-        if (type == 0) {
-            // Miniera: roccia + picconi + cristallo
-            paintFill.setColor(0xFF382C26);
-            canvas.drawCircle(iconCx, iconCy, 24f, paintFill);
-            drawFacetedGem(canvas, iconCx, iconCy - 4f, 8f);
-            paintStroke.setStrokeWidth(2f);
-            paintStroke.setColor(0xFF78350F);
-            canvas.drawLine(iconCx - 12f, iconCy + 14f, iconCx + 12f, iconCy - 6f, paintStroke);
-            canvas.drawLine(iconCx + 12f, iconCy + 14f, iconCx - 12f, iconCy - 6f, paintStroke);
-            paintStroke.setColor(0xFFE7E5E4);
-            canvas.drawLine(iconCx + 8f, iconCy - 9f, iconCx + 15f, iconCy - 3f, paintStroke);
-            canvas.drawLine(iconCx - 8f, iconCy - 9f, iconCx - 15f, iconCy - 3f, paintStroke);
+        Bitmap cardBmp = null;
+        if (type == 0) cardBmp = bmpMine;
+        else if (type == 1) cardBmp = bmpForgeOpen;
+        else if (type == 2) cardBmp = bmpVault;
+        else if (type == 3) cardBmp = bmpTurret != null ? bmpTurret : bmpShield;
 
-        } else if (type == 1) {
-            // Forgia: bocca di fuoco con sagoma incudine
-            paintFill.setColor(0xFF1C1917);
-            canvas.drawRoundRect(iconCx - 32f, iconCy - 20f, iconCx + 32f, iconCy + 20f, 4f, 4f, paintFill);
-            paintFill.setShader(new LinearGradient(iconCx, iconCy - 16f, iconCx, iconCy + 16f,
-                    0xFFFF3300, 0xFFFFCC00, Shader.TileMode.CLAMP));
-            canvas.drawRoundRect(iconCx - 26f, iconCy - 15f, iconCx + 26f, iconCy + 15f, 3f, 3f, paintFill);
-            paintFill.setShader(null);
-            // Incudine
-            paintFill.setColor(0xFF140F0D);
-            canvas.drawRect(iconCx - 12f, iconCy + 3f, iconCx + 12f, iconCy + 9f, paintFill);
-            canvas.drawRect(iconCx - 8f, iconCy - 5f, iconCx + 8f, iconCy + 3f, paintFill);
-            canvas.drawRect(iconCx - 10f, iconCy - 9f, iconCx + 14f, iconCy - 5f, paintFill);
-
-        } else if (type == 2) {
-            // Forziere: scrigno con oro
-            paintFill.setColor(0xFF3B1A0A);
-            canvas.drawRoundRect(iconCx - 28f, iconCy - 18f, iconCx + 28f, iconCy + 18f, 5f, 5f, paintFill);
-            paintStroke.setColor(0xFFF59E0B);
-            paintStroke.setStrokeWidth(1.5f);
-            canvas.drawRoundRect(iconCx - 28f, iconCy - 18f, iconCx + 28f, iconCy + 18f, 5f, 5f, paintStroke);
-            // Lingotti e monete
-            paintFill.setColor(0xFFFBBF24);
-            canvas.drawRect(iconCx - 18f, iconCy - 4f, iconCx - 4f, iconCy + 4f, paintFill);
-            paintFill.setColor(0xFFD6D3D1);
-            canvas.drawRect(iconCx + 4f, iconCy - 4f, iconCx + 18f, iconCy + 4f, paintFill);
-            paintFill.setColor(0xFFFDE047);
-            canvas.drawCircle(iconCx, iconCy - 7f, 4f, paintFill);
-
-        } else if (type == 3) {
-            // Scudo nanico & balista
-            paintFill.setColor(0xFF78350F);
-            canvas.drawRoundRect(iconCx - 22f, iconCy - 18f, iconCx + 22f, iconCy + 18f, 4f, 4f, paintFill);
-            paintStroke.setColor(0xFFD6D3D1);
-            paintStroke.setStrokeWidth(1.8f);
-            canvas.drawRoundRect(iconCx - 22f, iconCy - 18f, iconCx + 22f, iconCy + 18f, 4f, 4f, paintStroke);
-            paintFill.setColor(0xFFF59E0B);
-            canvas.drawCircle(iconCx, iconCy, 7f, paintFill);
-            paintStroke.setColor(0xFFDC2626);
-            paintStroke.setStrokeWidth(2f);
-            canvas.drawLine(iconCx, iconCy - 16f, iconCx, iconCy + 16f, paintStroke);
+        if (cardBmp != null) {
+            tempRect.set(iconCx - 36f, iconCy - 36f, iconCx + 36f, iconCy + 36f);
+            canvas.drawBitmap(cardBmp, null, tempRect, null);
         }
 
         // Testi a destra
