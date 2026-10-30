@@ -89,8 +89,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private final RectF tempRect = new RectF();
 
     // Regioni touch dinamiche in coordinate virtuali (adattate all'altezza dello schermo)
-    private final RectF btnHelp = new RectF(415f, 12f, 465f, 54f);
-    private final RectF btnPause = new RectF(475f, 12f, 525f, 54f);
+    private final RectF btnHelp = new RectF(440f, 10f, 482f, 70f);
+    private final RectF btnPause = new RectF(488f, 10f, 530f, 70f);
     private final RectF btnTutorialClose = new RectF(80f, 750f, 460f, 810f);
 
     // Pulsanti inferiori ergonomici (fase Ondata)
@@ -609,22 +609,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     // ==========================================
 
     private void drawGame(Canvas canvas, float dt) {
-        // Pavimento in pietra e atmosfera di rocca nanica a pieno schermo
-        float bgW = getWidth() > 0 ? (float) getWidth() : Game.W;
-        float bgH = getHeight() > 0 ? (float) getHeight() : virtualH;
-        if (bmpBg != null) {
-            tempRect.set(0f, 0f, bgW, bgH);
-            canvas.drawBitmap(bmpBg, null, tempRect, paintPixel);
-        } else {
-            paintFill.setStyle(Paint.Style.FILL);
-            if (bgH > 10f) {
-                paintFill.setShader(new LinearGradient(0f, 0f, 0f, bgH, 0xFF140C09, 0xFF24150F, Shader.TileMode.CLAMP));
-            } else {
-                paintFill.setColor(0xFF140C09);
-            }
-            canvas.drawRect(0f, 0f, bgW, bgH, paintFill);
-            paintFill.setShader(null);
-        }
+        float screenW = getWidth() > 0 ? (float) getWidth() : Game.W;
+        float screenH = getHeight() > 0 ? (float) getHeight() : virtualH;
+
+        // Base di fondo uniforme per evitare sfarfallii ai bordi estremi dello schermo
+        paintFill.setStyle(Paint.Style.FILL);
+        paintFill.setColor(0xFF140C09);
+        canvas.drawRect(0f, 0f, screenW, screenH, paintFill);
 
         canvas.save();
 
@@ -636,6 +627,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
         canvas.translate(shakeX * viewScale, shakeY * viewScale);
         canvas.scale(viewScale, viewScale);
+
+        // Rendering pixel art sfondo caverna SENZA stiramenti:
+        // Ripetiamo la texture di mattoni verticalmente lungo virtualH mantenendo
+        // rigorosamente il rapporto 1:1 dei pixel quadrati su qualsiasi schermo (Flip 7, 21:9, 16:9)
+        if (bmpBg != null) {
+            for (float y = 0f; y < virtualH; y += 960f) {
+                tempRect.set(0f, y, Game.W, y + 960f);
+                canvas.drawBitmap(bmpBg, null, tempRect, paintPixel);
+            }
+        }
 
         // Luce calda delle torce agli angoli superiori
         paintGlow.setStyle(Paint.Style.FILL);
@@ -768,8 +769,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintStroke.setStyle(Paint.Style.STROKE);
         paintStroke.setColor(0xFF573E30);
         paintStroke.setStrokeWidth(1.5f);
-        canvas.drawLine(14f, 65f, 14f, wallBottom, paintStroke);
-        canvas.drawLine(Game.W - 14f, 65f, Game.W - 14f, wallBottom, paintStroke);
+        canvas.drawLine(14f, 80f, 14f, wallBottom, paintStroke);
+        canvas.drawLine(Game.W - 14f, 80f, Game.W - 14f, wallBottom, paintStroke);
     }
 
     private void drawDwarvenTrench(Canvas canvas) {
@@ -1020,76 +1021,107 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawHUD(Canvas canvas) {
+        float topBarH = 80f;
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setShader(new LinearGradient(0f, 0f, 0f, 65f, 0xFA24150F, 0xEE140C09, Shader.TileMode.CLAMP));
-        canvas.drawRect(0f, 0f, Game.W, 65f, paintFill);
+        paintFill.setShader(new LinearGradient(0f, 0f, 0f, topBarH, 0xFF24150F, 0xFF140C09, Shader.TileMode.CLAMP));
+        canvas.drawRect(0f, 0f, Game.W, topBarH, paintFill);
         paintFill.setShader(null);
 
         paintStroke.setStyle(Paint.Style.STROKE);
-        paintStroke.setColor(0xFF573E30);
-        paintStroke.setStrokeWidth(1.5f);
-        canvas.drawLine(0f, 65f, Game.W, 65f, paintStroke);
+        paintStroke.setColor(0xFF78350F);
+        paintStroke.setStrokeWidth(2f);
+        canvas.drawLine(0f, topBarH, Game.W, topBarH, paintStroke);
 
-        tempRect.set(14f, 12f, 115f, 54f);
-        paintFill.setColor(0xFF382214);
+        // 1. Scheda ONDATE (x=10f..105f)
+        tempRect.set(10f, 10f, 105f, 70f);
+        paintFill.setColor(0xFF2E190E);
         canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
-        paintStroke.setColor(0xFF92400E);
+        paintStroke.setColor(0xFFB45309);
+        paintStroke.setStrokeWidth(1.5f);
         canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
 
-        paintText.setTextSize(10f);
-        paintText.setColor(0xFFD6D3D1);
         paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
         canvas.drawText("ASSEDIO", tempRect.centerX(), 28f, paintText);
-        paintText.setTextSize(14f);
+        paintText.setTextSize(16f);
         paintText.setColor(0xFFFBBF24);
-        canvas.drawText("Ondata " + game.wave + "/5", tempRect.centerX(), 46f, paintText);
+        canvas.drawText(game.wave + " / 5", tempRect.centerX(), 52f, paintText);
 
-        float startX = 130f;
+        // 2. Scheda INTEGRITA ROCCA (x=112f..240f)
+        tempRect.set(112f, 10f, 240f, 70f);
+        paintFill.setColor(0xFF26120D);
+        canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+        paintStroke.setColor(0xFF991B1B);
+        canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
+
+        paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFFCA5A5);
+        canvas.drawText("ROCCA: " + game.hp + "/" + game.maxHp, tempRect.centerX(), 28f, paintText);
+
+        // Orbi vitali piu grandi, nitidi e contrastati
+        float heartStartX = 126f;
         for (int i = 0; i < game.maxHp; i++) {
-            float cx = startX + i * 16f;
+            float cx = heartStartX + i * 22f;
             boolean active = i < game.hp;
-            paintFill.setColor(active ? 0xFFDC2626 : 0xFF44403C);
-            canvas.drawCircle(cx + 6f, 42f, 5.5f, paintFill);
+            paintFill.setColor(active ? 0xFFDC2626 : 0xFF3F3F46);
+            canvas.drawCircle(cx, 48f, 7f, paintFill);
             if (active) {
                 paintFill.setColor(0xFFFECACA);
-                canvas.drawCircle(cx + 5f, 40f, 2f, paintFill);
+                canvas.drawCircle(cx - 2f, 46f, 2.5f, paintFill);
             }
         }
-        paintText.setTextSize(10f);
-        paintText.setColor(0xFFE2E8F0);
-        paintText.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("INTEGRITÀ ROCCA", startX, 26f, paintText);
+
+        // 3. Scheda RISORSE & SPEDIZIONE (x=247f..375f)
+        tempRect.set(247f, 10f, 375f, 70f);
+        paintFill.setColor(0xFF2E190E);
+        canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+        paintStroke.setColor(0xFFB45309);
+        canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
 
         paintText.setTextAlign(Paint.Align.LEFT);
         paintText.setTextSize(13f);
-        paintText.setColor(0xFFFBBF24);
-        canvas.drawText("Ferro: " + game.iron, 245f, 28f, paintText);
-        paintText.setColor(0xFF6EE7B7);
-        canvas.drawText("Consegnati: " + game.delivered + "/" + game.target, 245f, 48f, paintText);
+        paintText.setColor(0xFFF59E0B);
+        canvas.drawText("Ferro: " + game.iron + " Fe", 257f, 32f, paintText);
+        paintText.setColor(0xFF34D399);
+        canvas.drawText("In Cassa: " + game.delivered + "/" + game.target, 257f, 54f, paintText);
 
+        // 4. Scheda TEMPO (x=382f..432f)
         int sec = (int) Math.max(0, game.duration - game.time);
-        paintText.setTextSize(15f);
-        paintText.setColor(sec <= 5 ? 0xFFEF4444 : 0xFFFDE68A);
-        paintText.setTextAlign(Paint.Align.RIGHT);
-        canvas.drawText(sec + "s", 405f, 38f, paintText);
+        tempRect.set(382f, 10f, 432f, 70f);
+        paintFill.setColor(0xFF26120D);
+        canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+        paintStroke.setColor(sec <= 5 ? 0xFFEF4444 : 0xFFB45309);
+        canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
 
-        // Pulsante Aiuto / Tutorial (?)
+        paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(9f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("TEMPO", tempRect.centerX(), 28f, paintText);
+        paintText.setTextSize(16f);
+        paintText.setColor(sec <= 5 ? 0xFFEF4444 : 0xFFFDE68A);
+        canvas.drawText(sec + "s", tempRect.centerX(), 52f, paintText);
+
+        // 5. Pulsante Aiuto / Tutorial (?) (x=440f..482f)
         paintFill.setColor(0xFF382214);
         canvas.drawRoundRect(btnHelp, 6f, 6f, paintFill);
-        paintStroke.setColor(0xFF92400E);
+        paintStroke.setColor(0xFFD97706);
+        paintStroke.setStrokeWidth(2f);
         canvas.drawRoundRect(btnHelp, 6f, 6f, paintStroke);
         paintText.setColor(0xFFFEF3C7);
-        paintText.setTextSize(16f);
+        paintText.setTextSize(18f);
         paintText.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("?", btnHelp.centerX(), btnHelp.centerY() + 5f, paintText);
+        canvas.drawText("?", btnHelp.centerX(), btnHelp.centerY() + 6f, paintText);
 
-        // Pulsante Pausa (||)
+        // 6. Pulsante Pausa (❚❚) (x=488f..530f)
         paintFill.setColor(0xFF382214);
         canvas.drawRoundRect(btnPause, 6f, 6f, paintFill);
-        paintStroke.setColor(0xFF92400E);
+        paintStroke.setColor(0xFFD97706);
+        paintStroke.setStrokeWidth(2f);
         canvas.drawRoundRect(btnPause, 6f, 6f, paintStroke);
         paintText.setColor(0xFFFEF3C7);
-        paintText.setTextSize(14f);
+        paintText.setTextSize(15f);
         paintText.setTextAlign(Paint.Align.CENTER);
         canvas.drawText("❚❚", btnPause.centerX(), btnPause.centerY() + 5f, paintText);
 

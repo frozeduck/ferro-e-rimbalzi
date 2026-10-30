@@ -484,7 +484,7 @@ public class Game {
                 // Pareti laterali e superiore
                 if (ball.x < ball.r + 14f) { ball.x = ball.r + 14f; ball.vx = Math.abs(ball.vx); }
                 if (ball.x > W - 14f - ball.r) { ball.x = W - 14f - ball.r; ball.vx = -Math.abs(ball.vx); }
-                if (ball.y < ball.r + 65f) { ball.y = ball.r + 65f; ball.vy = Math.abs(ball.vy); }
+                if (ball.y < ball.r + 80f) { ball.y = ball.r + 80f; ball.vy = Math.abs(ball.vy); }
 
                 // Rimbalzo sulla racchetta
                 if (ball.vy > 0f && ball.y + ball.r >= paddle.y && ball.y - ball.r < paddle.y + 16f
