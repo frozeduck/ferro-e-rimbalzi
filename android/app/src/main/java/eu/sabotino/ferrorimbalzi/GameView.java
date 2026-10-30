@@ -871,24 +871,34 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawBuilding(Canvas canvas, Game.Building b) {
-        Bitmap bmp = null;
         if ("wall".equals(b.type)) {
-            bmp = bmpWall;
-        } else if ("forge".equals(b.type)) {
-            bmp = game.forgeOpen ? bmpForgeOpen : bmpForgeClosed;
-        } else if ("vault".equals(b.type) || "depot".equals(b.type)) {
-            bmp = bmpVault;
-        } else if ("turret".equals(b.type)) {
-            bmp = bmpTurret;
-        }
-
-        if (bmp != null) {
-            drawPreservingAspect(canvas, bmp, b.x, b.y, b.w, b.h);
-        } else {
+            // Le mura devono coprire l'intera larghezza e altezza del box di collisione
             tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
-            paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor("forge".equals(b.type) ? 0xFF1C1917 : "wall".equals(b.type) ? 0xFF383532 : 0xFF3B1A0A);
-            canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+            if (bmpWall != null) {
+                canvas.drawBitmap(bmpWall, null, tempRect, paintPixel);
+            } else {
+                paintFill.setStyle(Paint.Style.FILL);
+                paintFill.setColor(0xFF383532);
+                canvas.drawRoundRect(tempRect, 3f, 3f, paintFill);
+            }
+        } else {
+            Bitmap bmp = null;
+            if ("forge".equals(b.type)) {
+                bmp = game.forgeOpen ? bmpForgeOpen : bmpForgeClosed;
+            } else if ("vault".equals(b.type) || "depot".equals(b.type)) {
+                bmp = bmpVault;
+            } else if ("turret".equals(b.type)) {
+                bmp = bmpTurret;
+            }
+
+            if (bmp != null) {
+                drawPreservingAspect(canvas, bmp, b.x, b.y, b.w, b.h);
+            } else {
+                tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
+                paintFill.setStyle(Paint.Style.FILL);
+                paintFill.setColor("forge".equals(b.type) ? 0xFF1C1917 : 0xFF3B1A0A);
+                canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+            }
         }
 
         // Bordo di selezione in cantiere

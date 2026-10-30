@@ -2,7 +2,7 @@ import pathlib
 import zipfile
 
 project = pathlib.Path(__file__).resolve().parent.parent
-apk = project / 'downloads/ferro-e-rimbalzi-0.9.3-debug.apk'
+apk = project / 'downloads/ferro-e-rimbalzi-0.9.4-debug.apk'
 
 assert apk.exists(), f"APK non trovato in {apk}"
 

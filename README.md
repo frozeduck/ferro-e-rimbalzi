@@ -2,7 +2,7 @@
 
 Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, progettato da zero per essere giocato in **orientamento verticale (portrait)** su smartphone con una sola mano.
 
-**[Scarica la Release v0.9.3 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.3)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
+**[Scarica la Release v0.9.4 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.4)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
 
 ---
 
@@ -40,12 +40,12 @@ Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, proge
 ## Download e Installazione
 
 Il pacchetto APK firmato pronto all'uso:
-* **APK**: `downloads/ferro-e-rimbalzi-0.9.3-debug.apk`
-* **Checksum**: `downloads/ferro-e-rimbalzi-0.9.3-debug.apk.sha256`
+* **APK**: `downloads/ferro-e-rimbalzi-0.9.4-debug.apk`
+* **Checksum**: `downloads/ferro-e-rimbalzi-0.9.4-debug.apk.sha256`
 
 Per installarlo tramite computer o adb:
 ```bash
-adb install downloads/ferro-e-rimbalzi-0.9.3-debug.apk
+adb install downloads/ferro-e-rimbalzi-0.9.4-debug.apk
 ```
 
 ---
