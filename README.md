@@ -2,6 +2,8 @@
 
 Gioco d'azione e logica nativo per Android: Breakout, trasporto delle risorse e costruzioni fisiche nella stessa arena. Interfaccia in italiano, ottimizzata per touchscreen. Nessun account, nessuna connessione Internet richiesta (100% offline).
 
+**[Scarica la Release v0.2.0 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.2.0)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
+
 ## Caratteristiche del gioco
 
 * **100% Nativo Android**: Sviluppato in Java con `SurfaceView` e rendering hardware su `Canvas`. Nessun browser, nessun WebView, nessun asset web.
