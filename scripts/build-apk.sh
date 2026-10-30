@@ -26,13 +26,13 @@ android/gradlew -p android --offline --no-daemon assembleDebug
 
 echo "=== 4. Preparazione pacchetto downloads ==="
 mkdir -p downloads
-cp android/app/build/outputs/apk/debug/app-debug.apk downloads/ferro-e-rimbalzi-0.7.0-debug.apk
+cp android/app/build/outputs/apk/debug/app-debug.apk downloads/ferro-e-rimbalzi-0.8.0-debug.apk
 
 echo "=== 5. Verifica integrità APK ==="
 python3 scripts/check-apk.py
 
 echo "=== 6. Generazione checksum SHA256 ==="
-sha256sum downloads/ferro-e-rimbalzi-0.7.0-debug.apk > downloads/ferro-e-rimbalzi-0.7.0-debug.apk.sha256
-cat downloads/ferro-e-rimbalzi-0.7.0-debug.apk.sha256
+sha256sum downloads/ferro-e-rimbalzi-0.8.0-debug.apk > downloads/ferro-e-rimbalzi-0.8.0-debug.apk.sha256
+cat downloads/ferro-e-rimbalzi-0.8.0-debug.apk.sha256
 echo "Compilazione e verifica completate con successo!"
 
