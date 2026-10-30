@@ -303,6 +303,10 @@ public class Game {
         return false;
     }
 
+    public float getDefenseY() {
+        return H - 145f;
+    }
+
     public void setVirtualHeight(float newH) {
         if (newH < 800f) newH = 800f;
         this.H = newH;
@@ -635,21 +639,21 @@ public class Game {
             if (e.hp <= 0) continue;
             float speedY;
             if ("spider".equals(e.type)) {
-                speedY = 14f + wave * 1.5f;
+                speedY = 18f + wave * 1.5f;
                 e.x += (float) Math.sin(elapsed * 5f + e.id.hashCode() % 10) * 45f * dt;
                 e.x = clamp(e.x, 20f, W - 20f - e.w);
             } else if ("treant".equals(e.type)) {
-                speedY = 4f + wave * 0.7f;
+                speedY = 10f + wave * 0.8f;
             } else if ("thief".equals(e.type)) {
-                speedY = 9f + wave;
+                speedY = 16f + wave * 1.2f;
             } else {
-                speedY = 5f + wave;
+                speedY = 13f + wave * 1.0f;
             }
             e.y += dt * speedY;
-            if (e.y + e.h >= H - 200f) {
+            if (e.y + e.h >= getDefenseY()) {
                 e.hp = 0;
                 hp--;
-                event("Breccia! −1 Cuore", e.x, H - 210f, 0xFFE9978B);
+                event("Breccia Nemica! −1 Cuore", e.x, getDefenseY() - 15f, 0xFFEF4444);
             }
         }
 
@@ -746,15 +750,15 @@ public class Game {
                     }
                 }
 
-                // Caduta sotto la linea
-                if (ball.y > H + 15f) {
+                // Caduta sotto la linea difensiva
+                if (ball.y > getDefenseY() + 15f) {
                     hp--;
                     stats.lostCargo += cargo();
                     ball.ore = 0;
                     ball.metal = 0;
                     ball.held = true;
                     ball.trail.clear();
-                    event("Sfera persa! −1 Cuore", 270f, 750f, 0xFFEF9A8E);
+                    event("Sfera Caduta! −1 Cuore", paddle.x, getDefenseY() - 15f, 0xFFF97316);
                     break;
                 }
             }
@@ -773,7 +777,7 @@ public class Game {
             if (escaped > 0) {
                 int penalty = (int) Math.ceil(escaped / 3.0);
                 hp = Math.max(0, hp - penalty);
-                event("Assedio nemico: −" + penalty + " Cuori", 270f, 750f, 0xFFEF9A8E);
+                event("Assalto nemico: Breccia! −" + penalty + " Cuori", 270f, getDefenseY() - 15f, 0xFFEF4444);
             }
             enemies.clear();
             if (hp <= 0) {

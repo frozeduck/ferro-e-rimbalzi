@@ -1002,25 +1002,31 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawDwarvenTrench(Canvas canvas) {
-        float defenseY = virtualH - 200f;
+        float defenseY = game.getDefenseY();
 
-        // Palizzata e trincea difensiva dei Nani
+        // Palizzata e trincea difensiva della Rocca
         paintStroke.setStyle(Paint.Style.STROKE);
-        paintStroke.setStrokeWidth(2.5f);
-        paintStroke.setColor(0xFFB91C1C);
+        paintStroke.setStrokeWidth(3f);
+        paintStroke.setColor(0xFFDC2626);
         canvas.drawLine(14f, defenseY, Game.W - 14f, defenseY, paintStroke);
 
-        // Punte di palizzata in legno
+        // Punte di palizzata acuminate in legno e ferro battuto
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(0xFF78350F);
-        for (float x = 20f; x < Game.W - 20f; x += 22f) {
+        paintFill.setColor(0xFF991B1B);
+        for (float x = 20f; x < Game.W - 20f; x += 20f) {
             rockPath.reset();
-            rockPath.moveTo(x - 5f, defenseY + 4f);
-            rockPath.lineTo(x, defenseY - 7f);
-            rockPath.lineTo(x + 5f, defenseY + 4f);
+            rockPath.moveTo(x - 6f, defenseY + 6f);
+            rockPath.lineTo(x, defenseY - 9f);
+            rockPath.lineTo(x + 6f, defenseY + 6f);
             rockPath.close();
             canvas.drawPath(rockPath, paintFill);
         }
+
+        // Testo di avviso chiaro sotto la linea
+        paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(9.5f);
+        paintText.setColor(0xCCFCA5A5);
+        canvas.drawText("▲ DIFESA ROCCA: SE NEMICI O SFERA OLTREPASSANO QUESTA LINEA PERDI 1 CUORE ▲", Game.W / 2f, defenseY + 16f, paintText);
     }
 
     private void drawPreservingAspect(Canvas canvas, Bitmap bmp, float x, float y, float w, float h) {
@@ -1544,9 +1550,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
         stepY += 140f;
         drawTutorialCard(canvas, 25f, stepY, 3,
-                "4. DIFESA DELLA ROCCA",
-                "Elimina i goblin prima che varchino la palizzata!",
-                "'Carico Armato' triplica i danni; 'Richiama' salva la sfera.");
+                "4. INTEGRITA DELLA ROCCA (CUORI)",
+                "Perdi 1 Cuore se un nemico tocca la trincea rossa",
+                "oppure se la sfera cade oltre la tua paletta!");
 
         // Pulsante "HO CAPITO ➔ ALLE ARMI!"
         paintFill.setStyle(Paint.Style.FILL);

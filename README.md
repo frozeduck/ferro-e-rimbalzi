@@ -2,7 +2,7 @@
 
 Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, progettato da zero per essere giocato in **orientamento verticale (portrait)** su smartphone con una sola mano.
 
-**[Scarica la Release v0.9.6 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.6)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
+**[Scarica la Release v0.9.7 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.7)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
 
 ---
 
