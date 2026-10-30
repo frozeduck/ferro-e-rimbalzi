@@ -8,7 +8,7 @@ import java.util.Map;
 public class Game {
     // Risoluzione virtuale nativa verticale (Portrait 9:16)
     public static final float W = 540f;
-    public static final float H = 960f;
+    public float H = 960f;
 
     public static final int COST_WALL = 3;
     public static final int COST_TURRET = 7;
@@ -133,6 +133,15 @@ public class Game {
         mines.add(new Mine(375f, 95f, 130f, 44f));
     }
 
+    public void setVirtualHeight(float newH) {
+        if (newH < 800f) newH = 800f;
+        this.H = newH;
+        this.paddle.y = H - 170f;
+        if (this.ball.held) {
+            this.ball.y = this.paddle.y - 20f;
+        }
+    }
+
     public static float clamp(float n, float a, float b) {
         return Math.max(a, Math.min(b, n));
     }
@@ -251,7 +260,7 @@ public class Game {
     public boolean canPlace(float rx, float ry, float rw, float rh, String exclude) {
         if (Float.isNaN(rx) || Float.isNaN(ry) || Float.isNaN(rw) || Float.isNaN(rh)) return false;
         // Zona edificabile mediana verticale
-        if (rx < 16f || rx + rw > W - 16f || ry < 220f || ry + rh > 730f) return false;
+        if (rx < 16f || rx + rw > W - 16f || ry < 220f || ry + rh > H - 230f) return false;
         for (Building b : buildings) {
             if (b.id.equals(exclude)) continue;
             if (rx < b.x + b.w + 10f && rx + rw + 10f > b.x && ry < b.y + b.h + 10f && ry + rh + 10f > b.y) {
@@ -427,10 +436,10 @@ public class Game {
         for (Enemy e : enemies) {
             if (e.hp <= 0) continue;
             e.y += dt * (e.type.equals("thief") ? 9f + wave : 5f + wave);
-            if (e.y + e.h >= 760f) {
+            if (e.y + e.h >= H - 200f) {
                 e.hp = 0;
                 hp--;
-                event("Breccia! −1 Cuore", e.x, 750f, 0xFFE9978B);
+                event("Breccia! −1 Cuore", e.x, H - 210f, 0xFFE9978B);
             }
         }
 
