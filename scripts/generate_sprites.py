@@ -1034,6 +1034,256 @@ def gen_pixel_legno():
     print('Pixel art generata: sprite_legno.png (64x64)')
 
 
+def gen_pixel_hub_forgia():
+    """Fucina dei Grandi Fabbri per l'Hub (128x128): camino fiammeggiante, incudine, martello e braci ardenti."""
+    w, h = 32, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Struttura della fucina in pietra
+    for y in range(8, 30):
+        for x in range(4, 28):
+            if x in (4, 27) or y in (8, 29):
+                pix[x, y] = PAL['black']
+            elif y < 14:
+                pix[x, y] = PAL['stone_mid'] if (x + y) % 2 == 0 else PAL['stone_dark']
+            else:
+                pix[x, y] = PAL['stone_dark'] if (x + y) % 3 == 0 else PAL['stone_shadow']
+
+    # Tetto spiovente in tegole di bronzo
+    for x in range(2, 30):
+        pix[x, 7] = PAL['black']
+        pix[x, 8] = PAL['gold_dark'] if x % 2 == 0 else PAL['gold_mid']
+
+    # Canna fumaria e fumo
+    for y in range(1, 8):
+        for x in range(13, 19):
+            pix[x, y] = PAL['iron_dark'] if x in (13, 18) else PAL['iron_light']
+    # Nuvole di fumo
+    for fx, fy in [(15, 0), (16, 0), (14, 1), (17, 1)]:
+        pix[fx, fy] = PAL['iron_white']
+
+    # Forno a bocca fiammeggiante al centro
+    for y in range(17, 26):
+        for x in range(10, 22):
+            if x in (10, 21) or y in (17, 25):
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['fire_dark'] if y == 18 else (PAL['fire_orange'] if y < 22 else PAL['fire_yellow'])
+    pix[15, 21] = PAL['fire_white']
+    pix[16, 21] = PAL['fire_white']
+
+    # Incudine d'acciaio davanti al forno
+    for y in range(23, 29):
+        for x in range(12, 20):
+            if y == 23 or y == 28 or x in (12, 19):
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['iron_white'] if y == 24 and x in (14, 15) else PAL['iron_mid']
+
+    # Martello nanico dorato appoggiato
+    for i in range(5):
+        pix[22 + i, 22 - i] = PAL['wood_mid']
+    pix[25, 17] = PAL['gold_light']
+    pix[26, 17] = PAL['gold_light']
+    pix[25, 18] = PAL['gold_dark']
+    pix[26, 18] = PAL['gold_dark']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_hub_forgia.png')
+    print('Pixel art generata: sprite_hub_forgia.png (128x128)')
+
+
+def gen_pixel_hub_taverna():
+    """Taverna della Botte Nanica per l'Hub (128x128): legno caldo, boccale schiumante e finestra illuminata."""
+    w, h = 32, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Edificio in legno di quercia
+    for y in range(8, 30):
+        for x in range(4, 28):
+            if x in (4, 27) or y in (8, 29):
+                pix[x, y] = PAL['black']
+            elif y < 14:
+                pix[x, y] = PAL['ruby_dark'] if (x + y) % 2 == 0 else PAL['wood_bark']
+            else:
+                pix[x, y] = PAL['wood_mid'] if (x + y) % 3 == 0 else PAL['wood_light']
+
+    # Tetto spiovente a scandole
+    for x in range(2, 30):
+        pix[x, 6] = PAL['black']
+        pix[x, 7] = PAL['ruby_mid'] if x % 2 == 0 else PAL['ruby_dark']
+
+    # Porta con arco in legno
+    for y in range(18, 30):
+        for x in range(12, 20):
+            if x in (12, 19) or y == 18:
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['wood_dark']
+    pix[18, 24] = PAL['gold_light'] # Maniglia in ottone
+
+    # Finestra calda illuminata a sinistra
+    for y in range(15, 21):
+        for x in range(6, 10):
+            pix[x, y] = PAL['fire_yellow'] if (x + y) % 2 == 0 else PAL['fire_white']
+
+    # Insegna a boccale di birra schiumante a destra
+    for y in range(12, 18):
+        for x in range(22, 26):
+            if y == 12:
+                pix[x, y] = PAL['fire_white'] # Schiuma
+            else:
+                pix[x, y] = PAL['gold_light'] # Birra
+    # Manico del boccale
+    pix[26, 14] = PAL['gold_dark']
+    pix[26, 15] = PAL['gold_dark']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_hub_taverna.png')
+    print('Pixel art generata: sprite_hub_taverna.png (128x128)')
+
+
+def gen_pixel_hub_banca():
+    """Tesoreria e Banca del Clan per l'Hub (128x128): caveau in granito, forzieri e mucchio d'oro."""
+    w, h = 32, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Mura massicce del caveau
+    for y in range(6, 30):
+        for x in range(4, 28):
+            if x in (4, 27) or y in (6, 29):
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['stone_mid'] if (x + y) % 2 == 0 else PAL['stone_dark']
+
+    # Portone a caveau tondo in ferro e oro
+    cx, cy = 16, 18
+    for dy in range(-7, 8):
+        for dx in range(-7, 8):
+            d2 = dx * dx + dy * dy
+            if d2 <= 49:
+                x = cx + dx
+                y = cy + dy
+                if 42 <= d2 <= 49:
+                    pix[x, y] = PAL['gold_mid'] if (dx + dy) % 2 == 0 else PAL['black']
+                elif d2 <= 8:
+                    pix[x, y] = PAL['gold_light'] # Runa centrale
+                else:
+                    pix[x, y] = PAL['iron_light'] if dx > 0 else PAL['iron_dark']
+
+    # Cumulo di monete d'oro e gemme davanti
+    for y in range(25, 30):
+        for x in range(6, 26):
+            if (x * 7 + y * 3) % 4 == 0:
+                pix[x, y] = PAL['gold_high']
+            elif (x + y) % 2 == 0:
+                pix[x, y] = PAL['gold_light']
+            elif (x + y) % 5 == 0:
+                pix[x, y] = PAL['gem_cyan_light']
+            else:
+                pix[x, y] = PAL['gold_mid']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_hub_banca.png')
+    print('Pixel art generata: sprite_hub_banca.png (128x128)')
+
+
+def gen_pixel_hub_cancello():
+    """Portale delle Spedizioni per l'Hub (128x128): arco scolpito nella roccia, binari e carrello da miniera."""
+    w, h = 32, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Arcata monumentale in roccia
+    for y in range(4, 30):
+        for x in range(2, 30):
+            if y < 10 or x < 8 or x > 23:
+                pix[x, y] = PAL['stone_dark'] if (x + y) % 2 == 0 else PAL['stone_mid']
+            elif y >= 10 and 8 <= x <= 23:
+                # Oscurità della galleria
+                pix[x, y] = PAL['black']
+
+    # Lanterne runiche ai lati dell'arco
+    for ly in (12, 13):
+        pix[6, ly] = PAL['gem_cyan_white']
+        pix[25, ly] = PAL['gem_cyan_white']
+
+    # Binari in ferro che escono dal buio
+    for y in range(20, 30):
+        pix[11, y] = PAL['iron_light'] if y % 2 == 0 else PAL['iron_dark']
+        pix[20, y] = PAL['iron_light'] if y % 2 == 0 else PAL['iron_dark']
+        if y in (22, 26):
+            for x in range(10, 22):
+                pix[x, y] = PAL['wood_dark']
+
+    # Carrello da miniera
+    for y in range(22, 28):
+        for x in range(12, 20):
+            if y == 22 or y == 27 or x in (12, 19):
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['wood_mid'] if y < 25 else PAL['iron_dark']
+    # Ruote del carrello
+    pix[12, 28] = PAL['iron_light']
+    pix[19, 28] = PAL['iron_light']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_hub_cancello.png')
+    print('Pixel art generata: sprite_hub_cancello.png (128x128)')
+
+
+def gen_pixel_nano():
+    """Capoclan Nano Guerriero (96x96): elmo con corna d'oro, folta barba rossa, armatura e martello."""
+    w, h = 24, 24
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Elmo nanico con corna
+    for y in range(2, 8):
+        for x in range(7, 17):
+            pix[x, y] = PAL['iron_light'] if x < 12 else PAL['iron_mid']
+    # Corna dell'elmo
+    pix[5, 2] = PAL['gold_light']
+    pix[6, 3] = PAL['gold_mid']
+    pix[18, 2] = PAL['gold_light']
+    pix[17, 3] = PAL['gold_mid']
+
+    # Occhi fieri
+    pix[9, 8] = PAL['black']
+    pix[14, 8] = PAL['black']
+    pix[10, 8] = PAL['iron_white']
+    pix[13, 8] = PAL['iron_white']
+
+    # Grande barba rossa/arancione
+    for y in range(9, 18):
+        bw = 6 - int((y - 9) * 0.3)
+        for x in range(12 - bw, 12 + bw + 1):
+            if x == 12 - bw or x == 12 + bw or y == 17:
+                pix[x, y] = PAL['fire_dark']
+            else:
+                pix[x, y] = PAL['fire_orange'] if (x + y) % 2 == 0 else PAL['gold_dark']
+    # Anello ferma-barba in oro
+    pix[11, 15] = PAL['gold_light']
+    pix[12, 15] = PAL['gold_light']
+
+    # Armatura nanica e gambe
+    for y in range(17, 22):
+        for x in range(8, 16):
+            pix[x, y] = PAL['iron_mid'] if (x + y) % 2 == 0 else PAL['iron_dark']
+    # Stivali
+    pix[8, 22] = PAL['wood_dark']
+    pix[9, 22] = PAL['wood_dark']
+    pix[14, 22] = PAL['wood_dark']
+    pix[15, 22] = PAL['wood_dark']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_nano.png')
+    print('Pixel art generata: sprite_nano.png (96x96)')
+
+
 if __name__ == '__main__':
     print('=== Inizio generazione Asset TRUE PIXEL ART (16-bit / 32-bit) ===')
     gen_pixel_miniera()
@@ -1054,4 +1304,10 @@ if __name__ == '__main__':
     gen_pixel_fungo()
     gen_pixel_muro_legno()
     gen_pixel_legno()
+    # Edifici e Personaggi Hub Interattivo
+    gen_pixel_hub_forgia()
+    gen_pixel_hub_taverna()
+    gen_pixel_hub_banca()
+    gen_pixel_hub_cancello()
+    gen_pixel_nano()
     print('=== Tutti gli sprite 16-bit Pixel Art generati con successo! ===')

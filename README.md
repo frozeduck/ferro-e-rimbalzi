@@ -2,17 +2,21 @@
 
 Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, progettato da zero per essere giocato in **orientamento verticale (portrait)** su smartphone con una sola mano.
 
-**[Scarica la Release v0.9.5 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.5)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
+**[Scarica la Release v0.9.6 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.6)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
 
 ---
 
-## Panoramica del Gioco (Ambientazione Fantasy Nanico & Biomi Multipli)
+## Panoramica del Gioco (Ambientazione Fantasy Nanico & Hub Interattivo)
 
 *Ferro e Rimbalzi* unisce il dinamismo del Breakout / flipper con un'economia tattica di spedizioni, estrazione mineraria, segheria silvana e difesa dall'assedio di mostri:
 
-### 1. Avamposto dei Nani (Hub & Progressione Basi)
-* **Sala delle Spedizioni**: seleziona la missione tra i biomi sbloccati.
-* **Scorte della Rocca**: accumula Ferro (`Fe`) e Legname per sbloccare nuovi territori nanici e potenziare le difese.
+### 1. Roccaforte dei Nani (Hub Interattivo Completo)
+La piazza centrale dell'Avamposto offre 4 edifici interattivi visitabili toccandoli:
+* **Grande Fucina dei Fabbri**: forgia miglioramenti permanenti validi per tutte le partite future (Tempra dello Scudo per cuori vitali, Stiva Runicata per la capienza della sfera, Incudine d'Acciaio per il danno base).
+* **Taverna della Botte Bollente**: bevi un boccale di Idromele della Roccia, Birra di Fungo Silvano o Distillato del Drago per ottenere una benedizione/buff temporaneo per la prossima spedizione.
+* **Camera del Tesoro & Annali Reali**: consulta il bilancio del regno (Ferro e Legname) e l'albo storico dei record (spedizioni vinte, minerali estratti, legname tagliato, mostri sconfitti).
+* **Portale delle Gallerie**: consulta la mappa tattica dei biomi, seleziona la destinazione (Miniera di Ferro o Bosco dei Nani) e avvia la spedizione sui binari.
+* **Salvataggio Persistente**: tutte le scorte, i potenziamenti del clan, i buff e i territori sbloccati sono salvati automaticamente con `SharedPreferences`.
 
 ### 2. Bioma Miniera di Ferro (Miniera Superiore)
 * 3 giacimenti di roccia viva per estrarre minerale di ferro.

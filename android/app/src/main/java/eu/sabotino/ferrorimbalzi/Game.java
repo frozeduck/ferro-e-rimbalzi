@@ -96,6 +96,20 @@ public class Game {
     public int clanWood = 0; // Riserve di legname
     public boolean forestUnlocked = false;
 
+    // Potenziamenti Permanenti del Clan (Fucina dell'Avamposto)
+    public int clanUpgradeHp = 0; // Liv. 0..3: +1 Cuore iniziale
+    public int clanUpgradeCapacity = 0; // Liv. 0..3: +1 Capienza sfera iniziale
+    public int clanUpgradeDamage = 0; // Liv. 0..2: +1 Danno base iniziale
+
+    // Benedizione della Taverna Nanica (Attiva per 1 spedizione)
+    public String clanBuff = ""; // "", "heart", "speed", "iron_start"
+
+    // Statistiche storiche del Clan
+    public int clanRunsWon = 0;
+    public int clanTotalMined = 0;
+    public int clanTotalWood = 0;
+    public int clanTotalKills = 0;
+
     public String phase = "build"; // build, wave, upgrade, won, short, lost
     public int wave = 0;
     public int maxWaves = 5;
@@ -173,10 +187,28 @@ public class Game {
         this.wave = 0;
         this.time = 0f;
         this.phase = "build";
-        this.iron = 6;
         this.delivered = 0;
-        this.hp = maxHp;
         this.kills = 0;
+
+        // Applicazione potenziamenti permanenti del Clan
+        this.maxHp = 6 + clanUpgradeHp;
+        this.hp = this.maxHp;
+        this.capacity = 4 + clanUpgradeCapacity;
+        this.damage = 1 + clanUpgradeDamage;
+        this.paddleWidth = 110f;
+        this.iron = 6;
+
+        // Applicazione benedizione della Taverna
+        if ("heart".equals(clanBuff)) {
+            this.maxHp++;
+            this.hp = this.maxHp;
+        } else if ("speed".equals(clanBuff)) {
+            this.paddleWidth += 25f;
+        } else if ("iron_start".equals(clanBuff)) {
+            this.iron += 3;
+        }
+        this.clanBuff = ""; // Consumata per questa spedizione
+
         this.ball.held = true;
         this.ball.x = paddle.x;
         this.ball.y = paddle.y - 20f;
@@ -191,14 +223,75 @@ public class Game {
     }
 
     public void returnToHub() {
+        if ("won".equals(phase)) {
+            clanRunsWon++;
+        }
+        clanTotalMined += stats.mined;
+        clanTotalKills += kills;
+
         if ("forest_wood".equals(selectedBiome)) {
             this.clanWood += this.delivered;
+            this.clanTotalWood += this.delivered;
         } else {
             this.clanIron += this.delivered;
         }
         this.screen = "hub";
         this.phase = "build";
         this.ball.held = true;
+    }
+
+    public boolean buyClanUpgrade(String type) {
+        if ("hp".equals(type)) {
+            if (clanUpgradeHp >= 3) return false;
+            int cost = 10 + clanUpgradeHp * 8;
+            if (clanIron < cost) return false;
+            clanIron -= cost;
+            clanUpgradeHp++;
+            return true;
+        }
+        if ("capacity".equals(type)) {
+            if (clanUpgradeCapacity >= 3) return false;
+            int costFe = 8 + clanUpgradeCapacity * 6;
+            int costWood = 6 + clanUpgradeCapacity * 6;
+            if (clanIron < costFe || clanWood < costWood) return false;
+            clanIron -= costFe;
+            clanWood -= costWood;
+            clanUpgradeCapacity++;
+            return true;
+        }
+        if ("damage".equals(type)) {
+            if (clanUpgradeDamage >= 2) return false;
+            int costFe = 15 + clanUpgradeDamage * 10;
+            int costWood = 10 + clanUpgradeDamage * 10;
+            if (clanIron < costFe || clanWood < costWood) return false;
+            clanIron -= costFe;
+            clanWood -= costWood;
+            clanUpgradeDamage++;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean buyTavernBuff(String type) {
+        if ("heart".equals(type)) {
+            if (clanIron < 3) return false;
+            clanIron -= 3;
+            clanBuff = "heart";
+            return true;
+        }
+        if ("speed".equals(type)) {
+            if (clanWood < 3) return false;
+            clanWood -= 3;
+            clanBuff = "speed";
+            return true;
+        }
+        if ("iron_start".equals(type)) {
+            if (clanIron < 4) return false;
+            clanIron -= 4;
+            clanBuff = "iron_start";
+            return true;
+        }
+        return false;
     }
 
     public boolean unlockForest() {

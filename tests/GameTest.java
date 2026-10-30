@@ -15,8 +15,9 @@ public class GameTest {
         testSpedizioneCompletaEVincibileUsandoSoltantoTiriRichiamiERacchetta();
         testHubESelezioneSpedizione();
         testSpedizioneNelBoscoDeiNani();
+        testHubInterattivoEdificiEPotenziamenti();
 
-        System.out.println("TUTTI GLI 11 TEST PASSATI CON SUCCESSO! (11/11)");
+        System.out.println("TUTTI I 12 TEST PASSATI CON SUCCESSO! (12/12)");
     }
 
     private static void assertEquals(Object actual, Object expected, String message) {
@@ -296,5 +297,44 @@ public class GameTest {
         assertEquals(s.screen, "hub", "Ritorno all'Avamposto");
         assertEquals(s.clanWood, 1, "Legname accreditato al Clan");
         System.out.println("✔ La spedizione nel Bosco dei Nani implementa correttamente legname, segheria, funghi e ragni");
+    }
+
+    public static void testHubInterattivoEdificiEPotenziamenti() {
+        Game s = new Game();
+        s.clanIron = 50;
+        s.clanWood = 30;
+
+        // 1. Fucina: acquisto potenziamenti permanenti
+        assertTrue(s.buyClanUpgrade("hp"), "Potenziamento Tempra dello Scudo acquistato");
+        assertEquals(s.clanUpgradeHp, 1, "Livello Tempra dello Scudo a 1");
+        assertEquals(s.clanIron, 40, "Residuo ferro dopo acquisto (50 - 10 = 40)");
+
+        assertTrue(s.buyClanUpgrade("capacity"), "Potenziamento Stiva Runicata acquistato");
+        assertEquals(s.clanUpgradeCapacity, 1, "Livello Stiva a 1");
+        assertEquals(s.clanIron, 32, "Residuo ferro (40 - 8 = 32)");
+        assertEquals(s.clanWood, 24, "Residuo legname (30 - 6 = 24)");
+
+        assertTrue(s.buyClanUpgrade("damage"), "Potenziamento Incudine d'Acciaio acquistato");
+        assertEquals(s.clanUpgradeDamage, 1, "Livello Danno a 1");
+
+        // 2. Taverna: acquisto benedizione
+        assertTrue(s.buyTavernBuff("heart"), "Acquisto birra idromele per +1 cuore extra");
+        assertEquals(s.clanBuff, "heart", "Buff attivo impostato a heart");
+
+        // 3. Avvio spedizione con verifica dei potenziamenti applicati
+        s.startExpedition("mine_iron");
+        assertEquals(s.maxHp, 8, "Vita massima con potenziamento permanente e buff taverna");
+        assertEquals(s.hp, 8, "Vita corrente coerente con maxHp");
+        assertEquals(s.capacity, 5, "Capienza aumentata dal clan (4 + 1 = 5)");
+        assertEquals(s.damage, 2, "Danno aumentato dal clan (1 + 1 = 2)");
+        assertEquals(s.clanBuff, "", "Buff della taverna consumato per la run");
+
+        // 4. Vittoria e accumulo statistiche
+        s.phase = "won";
+        s.delivered = 14;
+        s.returnToHub();
+        assertEquals(s.clanRunsWon, 1, "Raid vinti incrementati");
+        assertTrue(s.clanIron >= 14, "Ferro consegnato accreditato al clan");
+        System.out.println("✔ L'Hub interattivo gestisce correttamente potenziamenti della Fucina, buff della Taverna e statistiche");
     }
 }

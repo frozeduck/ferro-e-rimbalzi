@@ -63,6 +63,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private Bitmap bmpWood;
     private Bitmap bmpBg;
     private Bitmap bmpBgForesta;
+
+    // Sprite Edifici e Personaggi Hub Interattivo
+    private Bitmap bmpHubForge;
+    private Bitmap bmpHubTavern;
+    private Bitmap bmpHubBank;
+    private Bitmap bmpHubGate;
+    private Bitmap bmpNano;
     private final Paint paintPixel = new Paint();
 
     // Atmosfera sotterranea: Faville della forgia e pulviscolo di miniera
@@ -115,10 +122,32 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private final RectF cardUpgrade2 = new RectF(30f, 380f, 510f, 530f);
     private final RectF cardUpgrade3 = new RectF(30f, 550f, 510f, 700f);
 
-    // Hub dell'Avamposto Nanico e Selezione Spedizioni
-    private final RectF cardMineIron = new RectF(25f, 190f, 515f, 340f);
-    private final RectF cardForestWood = new RectF(25f, 360f, 515f, 510f);
-    private final RectF btnStartExpedition = new RectF(50f, 550f, 490f, 630f);
+    // Hub dell'Avamposto Nanico (Piazza ed Edifici)
+    private String hubModal = "plaza"; // "plaza", "forge", "tavern", "bank", "gate"
+
+    // Piazza dell'Avamposto: 4 Edifici visitabili a griglia 2x2
+    private final RectF cardHubForge = new RectF(24f, 200f, 256f, 395f);
+    private final RectF cardHubTavern = new RectF(284f, 200f, 516f, 395f);
+    private final RectF cardHubBank = new RectF(24f, 415f, 256f, 610f);
+    private final RectF cardHubGate = new RectF(284f, 415f, 516f, 610f);
+
+    // Finestra Modale Fucina (3 Potenziamenti permanenti)
+    private final RectF btnUpgradeHp = new RectF(40f, 220f, 500f, 320f);
+    private final RectF btnUpgradeCap = new RectF(40f, 335f, 500f, 435f);
+    private final RectF btnUpgradeDmg = new RectF(40f, 450f, 500f, 550f);
+
+    // Finestra Modale Taverna (3 Pinte / Benedizioni di spedizione)
+    private final RectF btnTavernHeart = new RectF(40f, 220f, 500f, 320f);
+    private final RectF btnTavernSpeed = new RectF(40f, 335f, 500f, 435f);
+    private final RectF btnTavernCharge = new RectF(40f, 450f, 500f, 550f);
+
+    // Finestra Modale Portale Spedizioni
+    private final RectF cardMineIron = new RectF(25f, 210f, 515f, 350f);
+    private final RectF cardForestWood = new RectF(25f, 370f, 515f, 510f);
+    private final RectF btnStartExpedition = new RectF(50f, 530f, 490f, 605f);
+
+    // Tasto chiudi modale per tornare alla piazza
+    private final RectF btnModalClose = new RectF(130f, 630f, 410f, 695f);
     private final RectF btnReturnHub = new RectF(150f, 650f, 390f, 715f);
 
     // Pulsanti finestra modale
@@ -172,6 +201,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             game.clanIron = sp.getInt("clan_iron", 0);
             game.clanWood = sp.getInt("clan_wood", 0);
             game.forestUnlocked = sp.getBoolean("forest_unlocked", false);
+            game.clanUpgradeHp = sp.getInt("clan_upgrade_hp", 0);
+            game.clanUpgradeCapacity = sp.getInt("clan_upgrade_cap", 0);
+            game.clanUpgradeDamage = sp.getInt("clan_upgrade_dmg", 0);
+            game.clanBuff = sp.getString("clan_buff", "");
+            game.clanRunsWon = sp.getInt("clan_runs_won", 0);
+            game.clanTotalMined = sp.getInt("clan_total_mined", 0);
+            game.clanTotalWood = sp.getInt("clan_total_wood", 0);
+            game.clanTotalKills = sp.getInt("clan_total_kills", 0);
         } catch (Throwable t) {
             android.util.Log.e("GameView", "Failed to load clan progress", t);
         }
@@ -184,6 +221,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                 .putInt("clan_iron", game.clanIron)
                 .putInt("clan_wood", game.clanWood)
                 .putBoolean("forest_unlocked", game.forestUnlocked)
+                .putInt("clan_upgrade_hp", game.clanUpgradeHp)
+                .putInt("clan_upgrade_cap", game.clanUpgradeCapacity)
+                .putInt("clan_upgrade_dmg", game.clanUpgradeDamage)
+                .putString("clan_buff", game.clanBuff)
+                .putInt("clan_runs_won", game.clanRunsWon)
+                .putInt("clan_total_mined", game.clanTotalMined)
+                .putInt("clan_total_wood", game.clanTotalWood)
+                .putInt("clan_total_kills", game.clanTotalKills)
                 .apply();
         } catch (Throwable t) {
             android.util.Log.e("GameView", "Failed to save clan progress", t);
@@ -210,6 +255,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             bmpWood = BitmapFactory.decodeResource(res, R.drawable.sprite_legno);
             bmpBg = BitmapFactory.decodeResource(res, R.drawable.sfondo_caverna);
             bmpBgForesta = BitmapFactory.decodeResource(res, R.drawable.sfondo_foresta);
+
+            // Sprite Hub Interattivo
+            bmpHubForge = BitmapFactory.decodeResource(res, R.drawable.sprite_hub_forgia);
+            bmpHubTavern = BitmapFactory.decodeResource(res, R.drawable.sprite_hub_taverna);
+            bmpHubBank = BitmapFactory.decodeResource(res, R.drawable.sprite_hub_banca);
+            bmpHubGate = BitmapFactory.decodeResource(res, R.drawable.sprite_hub_cancello);
+            bmpNano = BitmapFactory.decodeResource(res, R.drawable.sprite_nano);
         } catch (Throwable t) {
             android.util.Log.e("GameView", "Failed to load bitmaps", t);
         }
@@ -478,24 +530,108 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     private void handleTouchDown(float tx, float ty) {
         if ("hub".equals(game.screen)) {
-            if (cardMineIron.contains(tx, ty)) {
-                game.selectedBiome = "mine_iron";
-                AudioHelper.playAnvil();
-            } else if (cardForestWood.contains(tx, ty)) {
-                if (game.forestUnlocked) {
-                    game.selectedBiome = "forest_wood";
+            if ("plaza".equals(hubModal)) {
+                if (cardHubForge.contains(tx, ty)) {
+                    hubModal = "forge";
                     AudioHelper.playAnvil();
-                } else if (game.clanIron >= 14) {
-                    game.unlockForest();
-                    saveClanProgress(getContext());
-                    game.selectedBiome = "forest_wood";
-                    AudioHelper.playWarhorn();
-                } else {
+                } else if (cardHubTavern.contains(tx, ty)) {
+                    hubModal = "tavern";
+                    AudioHelper.playAnvil();
+                } else if (cardHubBank.contains(tx, ty)) {
+                    hubModal = "bank";
+                    AudioHelper.playAnvil();
+                } else if (cardHubGate.contains(tx, ty)) {
+                    hubModal = "gate";
                     AudioHelper.playAnvil();
                 }
-            } else if (btnStartExpedition.contains(tx, ty)) {
-                game.startExpedition(game.selectedBiome);
-                AudioHelper.playWarhorn();
+                return;
+            }
+
+            if ("forge".equals(hubModal)) {
+                if (btnUpgradeHp.contains(tx, ty)) {
+                    if (game.buyClanUpgrade("hp")) {
+                        saveClanProgress(getContext());
+                        AudioHelper.playAnvil();
+                        spawnParticles(tx, ty, 20, 0xFFEAB308, 0);
+                    }
+                } else if (btnUpgradeCap.contains(tx, ty)) {
+                    if (game.buyClanUpgrade("capacity")) {
+                        saveClanProgress(getContext());
+                        AudioHelper.playAnvil();
+                        spawnParticles(tx, ty, 20, 0xFF10B981, 0);
+                    }
+                } else if (btnUpgradeDmg.contains(tx, ty)) {
+                    if (game.buyClanUpgrade("damage")) {
+                        saveClanProgress(getContext());
+                        AudioHelper.playAnvil();
+                        spawnParticles(tx, ty, 20, 0xFFEF4444, 0);
+                    }
+                } else if (btnModalClose.contains(tx, ty)) {
+                    hubModal = "plaza";
+                    AudioHelper.playAnvil();
+                }
+                return;
+            }
+
+            if ("tavern".equals(hubModal)) {
+                if (btnTavernHeart.contains(tx, ty)) {
+                    if (game.buyTavernBuff("heart")) {
+                        saveClanProgress(getContext());
+                        AudioHelper.playAnvil();
+                        spawnParticles(tx, ty, 16, 0xFFEF4444, 1);
+                    }
+                } else if (btnTavernSpeed.contains(tx, ty)) {
+                    if (game.buyTavernBuff("speed")) {
+                        saveClanProgress(getContext());
+                        AudioHelper.playAnvil();
+                        spawnParticles(tx, ty, 16, 0xFF10B981, 1);
+                    }
+                } else if (btnTavernCharge.contains(tx, ty)) {
+                    if (game.buyTavernBuff("iron_start")) {
+                        saveClanProgress(getContext());
+                        AudioHelper.playAnvil();
+                        spawnParticles(tx, ty, 16, 0xFFF59E0B, 1);
+                    }
+                } else if (btnModalClose.contains(tx, ty)) {
+                    hubModal = "plaza";
+                    AudioHelper.playAnvil();
+                }
+                return;
+            }
+
+            if ("bank".equals(hubModal)) {
+                if (btnModalClose.contains(tx, ty)) {
+                    hubModal = "plaza";
+                    AudioHelper.playAnvil();
+                }
+                return;
+            }
+
+            if ("gate".equals(hubModal)) {
+                if (cardMineIron.contains(tx, ty)) {
+                    game.selectedBiome = "mine_iron";
+                    AudioHelper.playAnvil();
+                } else if (cardForestWood.contains(tx, ty)) {
+                    if (game.forestUnlocked) {
+                        game.selectedBiome = "forest_wood";
+                        AudioHelper.playAnvil();
+                    } else if (game.clanIron >= 14) {
+                        game.unlockForest();
+                        saveClanProgress(getContext());
+                        game.selectedBiome = "forest_wood";
+                        AudioHelper.playWarhorn();
+                    } else {
+                        AudioHelper.playAnvil();
+                    }
+                } else if (btnStartExpedition.contains(tx, ty)) {
+                    game.startExpedition(game.selectedBiome);
+                    saveClanProgress(getContext());
+                    AudioHelper.playWarhorn();
+                } else if (btnModalClose.contains(tx, ty)) {
+                    hubModal = "plaza";
+                    AudioHelper.playAnvil();
+                }
+                return;
             }
             return;
         }
@@ -1611,30 +1747,340 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawHub(Canvas canvas) {
+        if ("plaza".equals(hubModal)) {
+            drawHubPlaza(canvas);
+        } else if ("forge".equals(hubModal)) {
+            drawHubForge(canvas);
+        } else if ("tavern".equals(hubModal)) {
+            drawHubTavern(canvas);
+        } else if ("bank".equals(hubModal)) {
+            drawHubBank(canvas);
+        } else if ("gate".equals(hubModal)) {
+            drawHubGate(canvas);
+        }
+    }
+
+    private void drawHubPlaza(Canvas canvas) {
         // Testata Avamposto
         paintText.setTextAlign(Paint.Align.CENTER);
         paintText.setTextSize(22f);
         paintText.setColor(0xFFFBBF24);
-        canvas.drawText("AVAMPOSTO DEI NANI", Game.W / 2f, 75f, paintText);
+        canvas.drawText("ROCCAFORTE DEI NANI", Game.W / 2f, 75f, paintText);
 
-        paintText.setTextSize(13f);
+        paintText.setTextSize(12f);
         paintText.setColor(0xFFD6D3D1);
-        canvas.drawText("SALA DELLE SPEDIZIONI & RISERVE", Game.W / 2f, 102f, paintText);
+        canvas.drawText("PIAZZA DELL'AVAMPOSTO CENTRALE", Game.W / 2f, 98f, paintText);
 
-        // Magazzino Riserve Centrali (Chip Oro/Ferro)
-        tempRect.set(40f, 120f, Game.W - 40f, 175f);
+        // Chip Riserve Centrali (Ferro | Legname | Vittorie)
+        tempRect.set(20f, 115f, Game.W - 20f, 175f);
+        paintFill.setStyle(Paint.Style.FILL);
         paintFill.setColor(0xFF26150F);
         canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+        paintStroke.setStyle(Paint.Style.STROKE);
         paintStroke.setColor(0xFFB45309);
         paintStroke.setStrokeWidth(2f);
         canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
 
-        paintText.setTextAlign(Paint.Align.CENTER);
-        paintText.setTextSize(14f);
+        paintText.setTextSize(13f);
         paintText.setColor(0xFFF59E0B);
-        canvas.drawText("SCORTE ROCCA: " + game.clanIron + " Ferro  |  " + game.clanWood + " Legname", tempRect.centerX(), 154f, paintText);
+        canvas.drawText("Ferro: " + game.clanIron + " Fe   |   Legname: " + game.clanWood + "   |   Raid Vinti: " + game.clanRunsWon, tempRect.centerX(), 152f, paintText);
 
-        // 1. Scheda Spedizione: MINIERA DI FERRO
+        // 1. FUCINA DEI FABBRI (In alto a SX)
+        tempRect.set(cardHubForge);
+        paintFill.setColor(0xFF2A150D);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintFill);
+        paintStroke.setColor(0xFFF59E0B);
+        paintStroke.setStrokeWidth(2f);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintStroke);
+        drawPreservingAspect(canvas, bmpHubForge, cardHubForge.left + (cardHubForge.width() - 84f) / 2f, cardHubForge.top + 14f, 84f, 84f);
+        paintText.setTextSize(14f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("GRANDE FUCINA", cardHubForge.centerX(), cardHubForge.top + 120f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("Potenzia il Clan", cardHubForge.centerX(), cardHubForge.top + 140f, paintText);
+        paintText.setColor(0xFF34D399);
+        canvas.drawText((game.clanUpgradeHp + game.clanUpgradeCapacity + game.clanUpgradeDamage) + "/8 Migliorie", cardHubForge.centerX(), cardHubForge.top + 160f, paintText);
+        paintText.setColor(0xFFFDE68A);
+        canvas.drawText("TOCCA PER ENTRARE", cardHubForge.centerX(), cardHubForge.top + 180f, paintText);
+
+        // 2. TAVERNA DELLA BOTTE (In alto a DX)
+        tempRect.set(cardHubTavern);
+        paintFill.setColor(0xFF26180F);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintFill);
+        paintStroke.setColor(0xFFB45309);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintStroke);
+        drawPreservingAspect(canvas, bmpHubTavern, cardHubTavern.left + (cardHubTavern.width() - 84f) / 2f, cardHubTavern.top + 14f, 84f, 84f);
+        paintText.setTextSize(14f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("TAVERNA DELLA BOTTE", cardHubTavern.centerX(), cardHubTavern.top + 120f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("Bevi e ricevi buff", cardHubTavern.centerX(), cardHubTavern.top + 140f, paintText);
+        paintText.setColor(!game.clanBuff.isEmpty() ? 0xFF10B981 : 0xFF94A3B8);
+        canvas.drawText(!game.clanBuff.isEmpty() ? "BENEDIZIONE ATTIVA" : "Nessun buff", cardHubTavern.centerX(), cardHubTavern.top + 160f, paintText);
+        paintText.setColor(0xFFFDE68A);
+        canvas.drawText("TOCCA PER ENTRARE", cardHubTavern.centerX(), cardHubTavern.top + 180f, paintText);
+
+        // 3. TESORERIA DEL REGNO (In basso a SX)
+        tempRect.set(cardHubBank);
+        paintFill.setColor(0xFF1C1917);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintFill);
+        paintStroke.setColor(0xFF78716C);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintStroke);
+        drawPreservingAspect(canvas, bmpHubBank, cardHubBank.left + (cardHubBank.width() - 84f) / 2f, cardHubBank.top + 14f, 84f, 84f);
+        paintText.setTextSize(14f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("TESORERIA REALE", cardHubBank.centerX(), cardHubBank.top + 120f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("Bilancio & Annali", cardHubBank.centerX(), cardHubBank.top + 140f, paintText);
+        paintText.setColor(0xFFF59E0B);
+        canvas.drawText(game.clanTotalMined + " Fe storici", cardHubBank.centerX(), cardHubBank.top + 160f, paintText);
+        paintText.setColor(0xFFFDE68A);
+        canvas.drawText("TOCCA PER ENTRARE", cardHubBank.centerX(), cardHubBank.top + 180f, paintText);
+
+        // 4. PORTALE SPEDIZIONI (In basso a DX)
+        tempRect.set(cardHubGate);
+        paintFill.setColor(0xFF14291D);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintFill);
+        paintStroke.setColor(0xFF059669);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintStroke);
+        drawPreservingAspect(canvas, bmpHubGate, cardHubGate.left + (cardHubGate.width() - 84f) / 2f, cardHubGate.top + 14f, 84f, 84f);
+        paintText.setTextSize(14f);
+        paintText.setColor(0xFF34D399);
+        canvas.drawText("PORTALE GALLERIE", cardHubGate.centerX(), cardHubGate.top + 120f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("Scendi nelle profondità", cardHubGate.centerX(), cardHubGate.top + 140f, paintText);
+        paintText.setColor(0xFF34D399);
+        canvas.drawText("mine_iron".equals(game.selectedBiome) ? "Miniera pronta" : "Bosco pronto", cardHubGate.centerX(), cardHubGate.top + 160f, paintText);
+        paintText.setColor(0xFF6EE7B7);
+        canvas.drawText("TOCCA PER PARTIRE ➔", cardHubGate.centerX(), cardHubGate.top + 180f, paintText);
+
+        // Sezione inferiore: Nano Capoclan al centro della piazza
+        float nanoY = 635f;
+        drawPreservingAspect(canvas, bmpNano, Game.W / 2f - 40f, nanoY, 80f, 80f);
+        paintText.setTextSize(14f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("CAPOCLAN DELLA ROCCA", Game.W / 2f, nanoY + 95f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("Visita la Fucina o la Taverna, poi varca il Portale!", Game.W / 2f, nanoY + 115f, paintText);
+    }
+
+    private void drawHubForge(Canvas canvas) {
+        paintFill.setColor(0xF0120B07);
+        canvas.drawRect(0f, 0f, Game.W, virtualH, paintFill);
+
+        paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(22f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("FUCINA DEI GRANDI FABBRI", Game.W / 2f, 75f, paintText);
+        paintText.setTextSize(12f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("Miglioramenti permanenti per tutte le spedizioni future", Game.W / 2f, 100f, paintText);
+
+        paintText.setTextSize(13f);
+        paintText.setColor(0xFFF59E0B);
+        canvas.drawText("Scorte Clan: " + game.clanIron + " Ferro   |   " + game.clanWood + " Legname", Game.W / 2f, 135f, paintText);
+
+        // 1. Upgrade HP
+        tempRect.set(btnUpgradeHp);
+        int costHp = 10 + game.clanUpgradeHp * 8;
+        boolean maxHpReached = game.clanUpgradeHp >= 3;
+        boolean canHp = !maxHpReached && game.clanIron >= costHp;
+        paintFill.setColor(canHp ? 0xFF2A150D : 0xFF1C1917);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+        paintStroke.setColor(canHp ? 0xFFF59E0B : 0xFF52525B);
+        paintStroke.setStrokeWidth(2f);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
+        paintText.setTextAlign(Paint.Align.LEFT);
+        paintText.setTextSize(15f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("TEMPRA DELLO SCUDO  (Liv. " + game.clanUpgradeHp + "/3)", tempRect.left + 16f, tempRect.top + 34f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("+1 Cuore vitale iniziale per la Rocca.", tempRect.left + 16f, tempRect.top + 60f, paintText);
+        paintText.setColor(maxHpReached ? 0xFF34D399 : (canHp ? 0xFFFBBF24 : 0xFFEF4444));
+        canvas.drawText(maxHpReached ? "LIVELLO MASSIMO" : "Costo: " + costHp + " Fe (Tocca per forgiare)", tempRect.left + 16f, tempRect.top + 84f, paintText);
+
+        // 2. Upgrade Capacity
+        tempRect.set(btnUpgradeCap);
+        int costCapFe = 8 + game.clanUpgradeCapacity * 6;
+        int costCapWood = 6 + game.clanUpgradeCapacity * 6;
+        boolean maxCapReached = game.clanUpgradeCapacity >= 3;
+        boolean canCap = !maxCapReached && game.clanIron >= costCapFe && game.clanWood >= costCapWood;
+        paintFill.setColor(canCap ? 0xFF14291D : 0xFF1C1917);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+        paintStroke.setColor(canCap ? 0xFF10B981 : 0xFF52525B);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
+        paintText.setColor(0xFF34D399);
+        paintText.setTextSize(15f);
+        canvas.drawText("STIVA RUNICATA  (Liv. " + game.clanUpgradeCapacity + "/3)", tempRect.left + 16f, tempRect.top + 34f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("+1 Capienza di carico della sfera runica.", tempRect.left + 16f, tempRect.top + 60f, paintText);
+        paintText.setColor(maxCapReached ? 0xFF34D399 : (canCap ? 0xFFFBBF24 : 0xFFEF4444));
+        canvas.drawText(maxCapReached ? "LIVELLO MASSIMO" : "Costo: " + costCapFe + " Fe + " + costCapWood + " Legno", tempRect.left + 16f, tempRect.top + 84f, paintText);
+
+        // 3. Upgrade Damage
+        tempRect.set(btnUpgradeDmg);
+        int costDmgFe = 15 + game.clanUpgradeDamage * 10;
+        int costDmgWood = 10 + game.clanUpgradeDamage * 10;
+        boolean maxDmgReached = game.clanUpgradeDamage >= 2;
+        boolean canDmg = !maxDmgReached && game.clanIron >= costDmgFe && game.clanWood >= costDmgWood;
+        paintFill.setColor(canDmg ? 0xFF2B1214 : 0xFF1C1917);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+        paintStroke.setColor(canDmg ? 0xFFEF4444 : 0xFF52525B);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
+        paintText.setColor(0xFFF87171);
+        paintText.setTextSize(15f);
+        canvas.drawText("INCUDINE D'ACCIAIO  (Liv. " + game.clanUpgradeDamage + "/2)", tempRect.left + 16f, tempRect.top + 34f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("+1 Danno base inflitto dalla sfera ai mostri.", tempRect.left + 16f, tempRect.top + 60f, paintText);
+        paintText.setColor(maxDmgReached ? 0xFF34D399 : (canDmg ? 0xFFFBBF24 : 0xFFEF4444));
+        canvas.drawText(maxDmgReached ? "LIVELLO MASSIMO" : "Costo: " + costDmgFe + " Fe + " + costDmgWood + " Legno", tempRect.left + 16f, tempRect.top + 84f, paintText);
+
+        // Tasto Torna alla Piazza
+        drawModalCloseButton(canvas);
+    }
+
+    private void drawHubTavern(Canvas canvas) {
+        paintFill.setColor(0xF0120B07);
+        canvas.drawRect(0f, 0f, Game.W, virtualH, paintFill);
+
+        paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(22f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("TAVERNA DELLA BOTTE BOLLENTE", Game.W / 2f, 75f, paintText);
+        paintText.setTextSize(12f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("Offri una pinta per ricevere un buff per la prossima spedizione", Game.W / 2f, 100f, paintText);
+
+        paintText.setTextSize(13f);
+        String currentBuff = game.clanBuff.isEmpty() ? "Nessuna" :
+                ("heart".equals(game.clanBuff) ? "+1 Cuore Extra" :
+                ("speed".equals(game.clanBuff) ? "+25px Scudo & Reattività" : "+3 Ferro di Partenza"));
+        paintText.setColor(!game.clanBuff.isEmpty() ? 0xFF10B981 : 0xFF94A3B8);
+        canvas.drawText("Benedizione attuale: " + currentBuff, Game.W / 2f, 135f, paintText);
+
+        // Pinta 1: Heart
+        tempRect.set(btnTavernHeart);
+        boolean canHeart = game.clanIron >= 3;
+        paintFill.setColor(canHeart ? 0xFF2A150D : 0xFF1C1917);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+        paintStroke.setColor(canHeart ? 0xFFF59E0B : 0xFF52525B);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
+        paintText.setTextAlign(Paint.Align.LEFT);
+        paintText.setTextSize(15f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("IDROMELE DELLA ROCCIA (Costo: 3 Fe)", tempRect.left + 16f, tempRect.top + 34f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("+1 Cuore vitale extra per l'intera durata della spedizione.", tempRect.left + 16f, tempRect.top + 60f, paintText);
+        paintText.setColor(canHeart ? 0xFF34D399 : 0xFFEF4444);
+        canvas.drawText(canHeart ? "Tocca per bere l'idromele" : "Richiede 3 Ferro", tempRect.left + 16f, tempRect.top + 84f, paintText);
+
+        // Pinta 2: Speed
+        tempRect.set(btnTavernSpeed);
+        boolean canSpeed = game.clanWood >= 3;
+        paintFill.setColor(canSpeed ? 0xFF14291D : 0xFF1C1917);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+        paintStroke.setColor(canSpeed ? 0xFF10B981 : 0xFF52525B);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
+        paintText.setColor(0xFF34D399);
+        paintText.setTextSize(15f);
+        canvas.drawText("BIRRA DI FUNGO SILVANO (Costo: 3 Legno)", tempRect.left + 16f, tempRect.top + 34f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("+25px larghezza dello scudo per parate più agevoli.", tempRect.left + 16f, tempRect.top + 60f, paintText);
+        paintText.setColor(canSpeed ? 0xFF34D399 : 0xFFEF4444);
+        canvas.drawText(canSpeed ? "Tocca per bere la birra" : "Richiede 3 Legname", tempRect.left + 16f, tempRect.top + 84f, paintText);
+
+        // Pinta 3: Charge
+        tempRect.set(btnTavernCharge);
+        boolean canCharge = game.clanIron >= 4;
+        paintFill.setColor(canCharge ? 0xFF2A150D : 0xFF1C1917);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+        paintStroke.setColor(canCharge ? 0xFFF59E0B : 0xFF52525B);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
+        paintText.setColor(0xFFFBBF24);
+        paintText.setTextSize(15f);
+        canvas.drawText("DISTILLATO DEL DRAGO (Costo: 4 Fe)", tempRect.left + 16f, tempRect.top + 34f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("+3 Ferro spendibile già presente in cassa alla partenza.", tempRect.left + 16f, tempRect.top + 60f, paintText);
+        paintText.setColor(canCharge ? 0xFF34D399 : 0xFFEF4444);
+        canvas.drawText(canCharge ? "Tocca per bere il distillato" : "Richiede 4 Ferro", tempRect.left + 16f, tempRect.top + 84f, paintText);
+
+        drawModalCloseButton(canvas);
+    }
+
+    private void drawHubBank(Canvas canvas) {
+        paintFill.setColor(0xF0120B07);
+        canvas.drawRect(0f, 0f, Game.W, virtualH, paintFill);
+
+        paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(22f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("TESORERIA & ANNALI DEL CLAN", Game.W / 2f, 75f, paintText);
+        paintText.setTextSize(12f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("Registri storici delle conquiste sotterranee della Rocca", Game.W / 2f, 100f, paintText);
+
+        // Riquadro 1: Riserve
+        tempRect.set(30f, 140f, Game.W - 30f, 310f);
+        paintFill.setColor(0xFF1E1712);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintFill);
+        paintStroke.setColor(0xFFB45309);
+        paintStroke.setStrokeWidth(2f);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintStroke);
+
+        paintText.setTextAlign(Paint.Align.LEFT);
+        paintText.setTextSize(16f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("CAVEAU DEL REGNO", tempRect.left + 20f, tempRect.top + 34f, paintText);
+        paintText.setTextSize(13f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("• Ferro grezzo & raffinato nel tesoro: " + game.clanIron + " Fe", tempRect.left + 20f, tempRect.top + 70f, paintText);
+        canvas.drawText("• Legname pregiato accatastato: " + game.clanWood + " tronchi", tempRect.left + 20f, tempRect.top + 102f, paintText);
+        canvas.drawText("• Territori nanici esplorati: " + (1 + (game.forestUnlocked ? 1 : 0)) + " / 3 biomi", tempRect.left + 20f, tempRect.top + 134f, paintText);
+
+        // Riquadro 2: Annali di Guerra
+        tempRect.set(30f, 335f, Game.W - 30f, 550f);
+        paintFill.setColor(0xFF19181E);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintFill);
+        paintStroke.setColor(0xFF6366F1);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintStroke);
+
+        paintText.setTextSize(16f);
+        paintText.setColor(0xFFA5B4FC);
+        canvas.drawText("ANNALI DELLE BATTAGLIE", tempRect.left + 20f, tempRect.top + 34f, paintText);
+        paintText.setTextSize(13f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("• Spedizioni concluse con vittoria: " + game.clanRunsWon, tempRect.left + 20f, tempRect.top + 70f, paintText);
+        canvas.drawText("• Minerale totale estratto con la sfera: " + game.clanTotalMined, tempRect.left + 20f, tempRect.top + 102f, paintText);
+        canvas.drawText("• Legname totale ricavato dalla foresta: " + game.clanTotalWood, tempRect.left + 20f, tempRect.top + 134f, paintText);
+        canvas.drawText("• Mostri e invasori annientati: " + game.clanTotalKills, tempRect.left + 20f, tempRect.top + 166f, paintText);
+
+        drawModalCloseButton(canvas);
+    }
+
+    private void drawHubGate(Canvas canvas) {
+        paintFill.setColor(0xF0120B07);
+        canvas.drawRect(0f, 0f, Game.W, virtualH, paintFill);
+
+        paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(22f);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("PORTALE DELLE GALLERIE", Game.W / 2f, 75f, paintText);
+        paintText.setTextSize(12f);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("Seleziona la rotta di scavo prima di scendere sui binari", Game.W / 2f, 100f, paintText);
+
+        // Scheda 1: Miniera di Ferro
         boolean selIron = "mine_iron".equals(game.selectedBiome);
         tempRect.set(cardMineIron);
         paintFill.setColor(selIron ? 0xFF351C12 : 0xFF20130C);
@@ -1642,27 +2088,21 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintStroke.setColor(selIron ? 0xFFF59E0B : 0xFF78350F);
         paintStroke.setStrokeWidth(selIron ? 3f : 1.5f);
         canvas.drawRoundRect(tempRect, 10f, 10f, paintStroke);
-
-        // Icona Miniera a sinistra senza distorsioni
-        drawPreservingAspect(canvas, bmpMine, cardMineIron.left + 16f, cardMineIron.top + 20f, 96f, 72f);
-
+        drawPreservingAspect(canvas, bmpMine, cardMineIron.left + 16f, cardMineIron.top + 18f, 96f, 72f);
         paintText.setTextAlign(Paint.Align.LEFT);
-        paintText.setTextSize(17f);
+        paintText.setTextSize(16f);
         paintText.setColor(0xFFFBBF24);
-        canvas.drawText("MINIERA DI FERRO", cardMineIron.left + 125f, cardMineIron.top + 38f, paintText);
-
-        paintText.setTextSize(12f);
+        canvas.drawText("MINIERA DI FERRO", cardMineIron.left + 125f, cardMineIron.top + 36f, paintText);
+        paintText.setTextSize(11f);
         paintText.setColor(0xFFFEF3C7);
-        canvas.drawText("Gimmick: Fucina fusa, sfera pesante", cardMineIron.left + 125f, cardMineIron.top + 64f, paintText);
-
+        canvas.drawText("Gimmick: Fucina fusa, sfera pesante", cardMineIron.left + 125f, cardMineIron.top + 60f, paintText);
         paintText.setColor(0xFFD6D3D1);
-        canvas.drawText("Spacca la roccia e forgia lingotti.", cardMineIron.left + 125f, cardMineIron.top + 88f, paintText);
-
-        paintText.setTextSize(13f);
+        canvas.drawText("Spacca la roccia e forgia lingotti.", cardMineIron.left + 125f, cardMineIron.top + 82f, paintText);
+        paintText.setTextSize(12f);
         paintText.setColor(selIron ? 0xFF34D399 : 0xFF94A3B8);
-        canvas.drawText(selIron ? "● SELEZIONATA" : "Tocca per selezionare", cardMineIron.left + 125f, cardMineIron.top + 120f, paintText);
+        canvas.drawText(selIron ? "● SELEZIONATA" : "Tocca per selezionare", cardMineIron.left + 125f, cardMineIron.top + 110f, paintText);
 
-        // 2. Scheda Spedizione: BOSCO DEI NANI
+        // Scheda 2: Bosco dei Nani
         boolean selForest = "forest_wood".equals(game.selectedBiome);
         tempRect.set(cardForestWood);
         paintFill.setColor(selForest ? 0xFF14291D : 0xFF171717);
@@ -1670,44 +2110,54 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintStroke.setColor(!game.forestUnlocked ? 0xFF52525B : selForest ? 0xFF10B981 : 0xFF047857);
         paintStroke.setStrokeWidth(selForest ? 3f : 1.5f);
         canvas.drawRoundRect(tempRect, 10f, 10f, paintStroke);
-
-        // Icona Bosco / Albero Antico a sinistra
-        drawPreservingAspect(canvas, bmpTree != null ? bmpTree : bmpShield, cardForestWood.left + 16f, cardForestWood.top + 20f, 96f, 72f);
-
+        drawPreservingAspect(canvas, bmpTree != null ? bmpTree : bmpShield, cardForestWood.left + 16f, cardForestWood.top + 18f, 96f, 72f);
         paintText.setTextAlign(Paint.Align.LEFT);
-        paintText.setTextSize(17f);
+        paintText.setTextSize(16f);
         paintText.setColor(game.forestUnlocked ? 0xFF34D399 : 0xFFA1A1AA);
-        canvas.drawText("BOSCO DEI NANI", cardForestWood.left + 125f, cardForestWood.top + 38f, paintText);
-
-        paintText.setTextSize(12f);
+        canvas.drawText("BOSCO DEI NANI", cardForestWood.left + 125f, cardForestWood.top + 36f, paintText);
+        paintText.setTextSize(11f);
         paintText.setColor(0xFFE2E8F0);
-        canvas.drawText("Gimmick: Ceppi elastici & segheria", cardForestWood.left + 125f, cardForestWood.top + 64f, paintText);
-
+        canvas.drawText("Gimmick: Ceppi elastici & segheria", cardForestWood.left + 125f, cardForestWood.top + 60f, paintText);
         if (game.forestUnlocked) {
             paintText.setColor(0xFFD6D3D1);
-            canvas.drawText("Raccogli legname pregiato per baliste.", cardForestWood.left + 125f, cardForestWood.top + 88f, paintText);
-            paintText.setTextSize(13f);
+            canvas.drawText("Raccogli legname e respingi i ragni.", cardForestWood.left + 125f, cardForestWood.top + 82f, paintText);
+            paintText.setTextSize(12f);
             paintText.setColor(selForest ? 0xFF34D399 : 0xFF94A3B8);
-            canvas.drawText(selForest ? "● SELEZIONATA" : "Tocca per selezionare", cardForestWood.left + 125f, cardForestWood.top + 120f, paintText);
+            canvas.drawText(selForest ? "● SELEZIONATA" : "Tocca per selezionare", cardForestWood.left + 125f, cardForestWood.top + 110f, paintText);
         } else {
             paintText.setColor(game.clanIron >= 14 ? 0xFFFBBF24 : 0xFFEF4444);
-            canvas.drawText("Richiede 14 Ferro (Hai: " + game.clanIron + ")", cardForestWood.left + 125f, cardForestWood.top + 88f, paintText);
-            paintText.setTextSize(13f);
+            canvas.drawText("Richiede 14 Ferro (Hai: " + game.clanIron + ")", cardForestWood.left + 125f, cardForestWood.top + 82f, paintText);
+            paintText.setTextSize(12f);
             paintText.setColor(game.clanIron >= 14 ? 0xFFFBBF24 : 0xFF71717A);
-            canvas.drawText(game.clanIron >= 14 ? "TOCCA PER SBLOCCARE (14 Fe)" : "BLOCCATA", cardForestWood.left + 125f, cardForestWood.top + 120f, paintText);
+            canvas.drawText(game.clanIron >= 14 ? "TOCCA PER SBLOCCARE (14 Fe)" : "BLOCCATA", cardForestWood.left + 125f, cardForestWood.top + 110f, paintText);
         }
 
-        // Tasto centrale: AVVIA SPEDIZIONE
+        // Tasto Avvia Spedizione
         paintFill.setColor(0xFF047857);
         canvas.drawRoundRect(btnStartExpedition, 10f, 10f, paintFill);
         paintStroke.setColor(0xFF6EE7B7);
         paintStroke.setStrokeWidth(2.5f);
         canvas.drawRoundRect(btnStartExpedition, 10f, 10f, paintStroke);
+        paintText.setTextAlign(Paint.Align.CENTER);
+        paintText.setTextSize(17f);
+        paintText.setColor(0xFFFFFFFF);
+        String startLabel = "mine_iron".equals(game.selectedBiome) ? "ENTRA NELLA MINIERA ➔" : "ESPLORA IL BOSCO ➔";
+        canvas.drawText(startLabel, btnStartExpedition.centerX(), btnStartExpedition.centerY() + 6f, paintText);
+
+        drawModalCloseButton(canvas);
+    }
+
+    private void drawModalCloseButton(Canvas canvas) {
+        tempRect.set(btnModalClose);
+        paintFill.setColor(0xFF292524);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+        paintStroke.setColor(0xFFD97706);
+        paintStroke.setStrokeWidth(2f);
+        canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
 
         paintText.setTextAlign(Paint.Align.CENTER);
-        paintText.setTextSize(18f);
-        paintText.setColor(0xFFFFFFFF);
-        String startLabel = "mine_iron".equals(game.selectedBiome) ? "ENTRA NELLA MINIERA" : "ESPLORA IL BOSCO";
-        canvas.drawText(startLabel, btnStartExpedition.centerX(), btnStartExpedition.centerY() + 7f, paintText);
+        paintText.setTextSize(14f);
+        paintText.setColor(0xFFFDE68A);
+        canvas.drawText("TORNA ALLA PIAZZA", tempRect.centerX(), tempRect.centerY() + 5f, paintText);
     }
 }
