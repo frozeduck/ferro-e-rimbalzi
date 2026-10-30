@@ -2,7 +2,7 @@ import pathlib
 import zipfile
 
 project = pathlib.Path(__file__).resolve().parent.parent
-apk = project / 'downloads/ferro-e-rimbalzi-0.3.0-debug.apk'
+apk = project / 'downloads/ferro-e-rimbalzi-0.4.0-debug.apk'
 
 assert apk.exists(), f"APK non trovato in {apk}"
 
@@ -21,3 +21,4 @@ with zipfile.ZipFile(apk) as archive:
     assert permission.encode() not in manifest and permission.encode('utf-16-le') not in manifest, 'Permesso Internet inatteso: il gioco deve essere 100% offline'
 
 print('APK OK: integrità, architettura nativa Java (classes.dex), zero file web, 100% offline.')
+
