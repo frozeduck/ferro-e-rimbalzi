@@ -5,6 +5,7 @@ Disegna su matrici a bassa risoluzione (griglia pixel nativa) e scala con NEARES
 ZERO grafica vettoriale: solo pixel puri, palette controllata a 32 colori, contorni a blocchi e dithering.
 """
 import pathlib
+import math
 from PIL import Image, ImageDraw
 
 OUT_DIR = pathlib.Path(__file__).resolve().parent.parent / 'android/app/src/main/res/drawable'
@@ -14,6 +15,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 PAL = {
     'void': (0, 0, 0, 0),
     'black': (18, 14, 16, 255),
+    'white': (255, 255, 255, 255),
     'stone_shadow': (32, 26, 42, 255),
     'stone_dark': (52, 45, 68, 255),
     'stone_mid': (82, 75, 102, 255),
@@ -64,6 +66,20 @@ PAL = {
     'spider_body': (28, 20, 36, 255),
     'spider_leg': (54, 38, 68, 255),
     'spider_eye': (235, 32, 60, 255),
+    'amethyst_dark': (45, 18, 65, 255),
+    'amethyst_mid': (95, 38, 130, 255),
+    'amethyst_light': (165, 80, 215, 255),
+    'amethyst_high': (225, 160, 255, 255),
+    'crystal_dark': (14, 52, 78, 255),
+    'crystal_mid': (24, 112, 158, 255),
+    'crystal_light': (60, 195, 235, 255),
+    'crystal_high': (190, 245, 255, 255),
+    'obsidian_black': (12, 10, 18, 255),
+    'obsidian_dark': (26, 20, 36, 255),
+    'obsidian_mid': (46, 38, 62, 255),
+    'obsidian_light': (78, 68, 98, 255),
+    'laser_red': (255, 45, 80, 255),
+    'laser_cyan': (60, 240, 255, 255),
 }
 
 
@@ -1034,6 +1050,464 @@ def gen_pixel_legno():
     print('Pixel art generata: sprite_legno.png (64x64)')
 
 
+def gen_pixel_cristalli_sfondo():
+    """Sfondo caverna dei cristalli 16-bit: lastre di ossidiana violacea, geodi azzurri e rune scintillanti."""
+    w, h = 135, 240
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Muro di ossidiana violacea scura e basalto
+    block_h = 10
+    block_w = 16
+    for y in range(h):
+        row = y // block_h
+        is_mortar_y = (y % block_h == 0)
+        shift = 8 if row % 2 == 1 else 0
+        for x in range(w):
+            is_mortar_x = ((x + shift) % block_w == 0)
+            if is_mortar_y or is_mortar_x:
+                pix[x, y] = PAL['black']
+            else:
+                # Trama di ossidiana e riflessi ametista
+                r = (x * 11 + y * 17) % 31
+                if r < 4:
+                    pix[x, y] = PAL['obsidian_black']
+                elif r < 14:
+                    pix[x, y] = PAL['obsidian_dark']
+                elif r < 24:
+                    pix[x, y] = PAL['obsidian_mid']
+                else:
+                    pix[x, y] = PAL['amethyst_dark']
+
+    # Pilastri di cristallo e guglie di ossidiana ai bordi laterali
+    for y in range(h):
+        for x in range(12):
+            if x == 0 or x == 11:
+                pix[x, y] = PAL['black']
+            elif x < 5:
+                pix[x, y] = PAL['amethyst_mid'] if (x + y) % 3 == 0 else PAL['obsidian_mid']
+            else:
+                pix[x, y] = PAL['obsidian_dark'] if (x + y) % 2 == 0 else PAL['obsidian_black']
+        for x in range(w - 12, w):
+            if x == w - 12 or x == w - 1:
+                pix[x, y] = PAL['black']
+            elif x < w - 5:
+                pix[x, y] = PAL['obsidian_dark'] if (x + y) % 2 == 0 else PAL['obsidian_black']
+            else:
+                pix[x, y] = PAL['amethyst_mid'] if (x + y) % 3 == 0 else PAL['obsidian_mid']
+
+    # Piccoli geodi di cristallo ciano scintillanti incastonati nella roccia
+    geodes = [(32, 45), (102, 70), (45, 110), (90, 140), (35, 180), (105, 205)]
+    for gx, gy in geodes:
+        pix[gx, gy] = PAL['crystal_high']
+        pix[gx - 1, gy] = PAL['crystal_light']
+        pix[gx + 1, gy] = PAL['crystal_mid']
+        pix[gx, gy - 1] = PAL['crystal_light']
+        pix[gx, gy + 1] = PAL['crystal_dark']
+
+    # Prismi luminosi a parete (luce azzurra / ciano runica)
+    for tx, ty in [(20, 60), (w - 20, 60), (20, 150), (w - 20, 150)]:
+        pix[tx, ty + 2] = PAL['obsidian_light']
+        pix[tx, ty + 3] = PAL['obsidian_mid']
+        pix[tx, ty] = PAL['crystal_high']
+        pix[tx - 1, ty] = PAL['crystal_light']
+        pix[tx + 1, ty] = PAL['crystal_light']
+        pix[tx, ty - 1] = PAL['amethyst_light']
+        pix[tx, ty - 2] = PAL['crystal_light']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sfondo_cristalli.png')
+    print('Pixel art generata: sfondo_cristalli.png (540x960)')
+
+
+def gen_pixel_cristallo():
+    """Giacimento di Cristalli Puri / Mithril (192x96): cluster di cristalli ciano sfaccettati su roccia."""
+    w, h = 48, 24
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Base di roccia basaltica scura
+    for y in range(14, 24):
+        for x in range(4, 44):
+            if x >= 4 + (24 - y) and x <= 44 - (24 - y):
+                if y == 23 or x == 4 + (24 - y) or x == 44 - (24 - y):
+                    pix[x, y] = PAL['black']
+                else:
+                    pix[x, y] = PAL['obsidian_dark'] if (x + y) % 2 == 0 else PAL['obsidian_mid']
+
+    # Cluster di 5 cristalli a punta che emergono verso l'alto
+    spires = [
+        (10, 8, 5, 14),   # x, tip_y, half_w, base_y
+        (18, 3, 6, 17),   # spira centrale alta
+        (26, 5, 6, 18),   # spira gemella
+        (34, 4, 5, 16),   # spira destra
+        (40, 9, 4, 15),   # spira laterale
+    ]
+
+    for cx, ty, hw, by in spires:
+        for y in range(ty, by):
+            cur_w = max(1, int(hw * (y - ty) / (by - ty)))
+            for x in range(cx - cur_w, cx + cur_w + 1):
+                if x == cx - cur_w or x == cx + cur_w or y == ty:
+                    pix[x, y] = PAL['crystal_dark']
+                elif x < cx:
+                    pix[x, y] = PAL['crystal_high'] if x == cx - 1 and y < ty + 5 else PAL['crystal_light']
+                elif x == cx:
+                    pix[x, y] = PAL['crystal_high'] if y < ty + 3 else PAL['crystal_mid']
+                else:
+                    pix[x, y] = PAL['crystal_mid'] if (x + y) % 2 == 0 else PAL['crystal_dark']
+
+    # Riflessi brillanti e punti luce bianchi
+    pix[18, 4] = PAL['white']
+    pix[26, 6] = PAL['white']
+    pix[34, 5] = PAL['white']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_cristallo.png')
+    print('Pixel art generata: sprite_cristallo.png (192x96)')
+
+
+def gen_pixel_tagliapietre():
+    """Banco del Tagliapietre Runico (192x128): mola rotante a smeriglio, calibri nanici e cristalli in taglio."""
+    w, h = 48, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Basamento in pietra massiccia lavorata con decori di bronzo
+    for y in range(12, 31):
+        for x in range(4, 44):
+            if x in (4, 43) or y in (12, 30):
+                pix[x, y] = PAL['black']
+            elif y in (13, 14):
+                pix[x, y] = PAL['stone_light'] if x % 4 in (1, 2) else PAL['stone_mid']
+            elif y > 24:
+                pix[x, y] = PAL['iron_dark'] if (x + y) % 2 == 0 else PAL['stone_dark']
+            else:
+                pix[x, y] = PAL['stone_mid']
+
+    # Ruota della Mola rotante a sinistra (diametro 14px)
+    for y in range(4, 18):
+        for x in range(8, 22):
+            dx = x - 15
+            dy = y - 11
+            d2 = dx * dx + dy * dy
+            if 36 <= d2 <= 49:
+                pix[x, y] = PAL['black']
+            elif 16 <= d2 < 36:
+                # Disco rotante di smeriglio con faville azzurre
+                pix[x, y] = PAL['crystal_high'] if (x + y * 2) % 5 == 0 else PAL['iron_light']
+            elif d2 < 16:
+                pix[x, y] = PAL['iron_dark']
+
+    # Supporto mola in ferro battuto
+    for y in range(14, 20):
+        pix[14, y] = PAL['iron_light']
+        pix[15, y] = PAL['iron_mid']
+
+    # Cristallo grande montato sul carrello di taglio a destra
+    for y in range(5, 13):
+        cur_w = 4 - abs(y - 9)
+        for x in range(32 - cur_w, 32 + cur_w + 1):
+            if x in (32 - cur_w, 32 + cur_w) or y in (5, 12):
+                pix[x, y] = PAL['crystal_dark']
+            elif x < 32:
+                pix[x, y] = PAL['crystal_high']
+            else:
+                pix[x, y] = PAL['crystal_light']
+
+    # Scintille di sfaccettatura (cyan/white sparks)
+    sparks = [(16, 8), (17, 7), (18, 9), (21, 6), (28, 9), (29, 8)]
+    for sx, sy in sparks:
+        pix[sx, sy] = PAL['crystal_high']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_tagliapietre.png')
+    print('Pixel art generata: sprite_tagliapietre.png (192x128)')
+
+
+def gen_pixel_forziere_cristallo():
+    """Cassaforte delle Gemme (192x128): forziere d'ossidiana rinforzato con serrature runiche e gemme splendenti."""
+    w, h = 48, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Corpo forziere (ossidiana e finiture oro)
+    for y in range(10, 30):
+        for x in range(4, 44):
+            if x in (4, 43) or y in (10, 29):
+                pix[x, y] = PAL['black']
+            elif x in (5, 6, 41, 42) or y in (11, 28):
+                pix[x, y] = PAL['gold_mid'] if (x + y) % 2 == 0 else PAL['gold_light']
+            else:
+                pix[x, y] = PAL['obsidian_dark'] if (x + y) % 3 == 0 else PAL['obsidian_mid']
+
+    # Coperchio sollevato / interno pieno di gemme
+    for y in range(4, 11):
+        for x in range(8, 40):
+            if y == 4 or x in (8, 39):
+                pix[x, y] = PAL['gold_dark']
+            else:
+                # Mucchio di gemme sfaccettate multicolore (ciano, ametista, oro)
+                r = (x * 7 + y * 13) % 17
+                if r < 6:
+                    pix[x, y] = PAL['crystal_high']
+                elif r < 11:
+                    pix[x, y] = PAL['crystal_light']
+                elif r < 14:
+                    pix[x, y] = PAL['amethyst_light']
+                else:
+                    pix[x, y] = PAL['gold_high']
+
+    # Serratura runica a prisma centrale
+    for y in range(16, 23):
+        for x in range(21, 27):
+            if x in (21, 26) or y in (16, 22):
+                pix[x, y] = PAL['gold_dark']
+            else:
+                pix[x, y] = PAL['crystal_high'] if (x + y) % 2 == 0 else PAL['crystal_light']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_forziere_cristallo.png')
+    print('Pixel art generata: sprite_forziere_cristallo.png (192x128)')
+
+
+def gen_pixel_prisma():
+    """Prisma di Risonanza Cristallina (128x128): gemma di risonanza fluttuante su piedistallo runico."""
+    w, h = 32, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Piedistallo nanico inferiore (ossidiana intagliata e oro)
+    for y in range(24, 31):
+        pw = min(14, (y - 24) * 2 + 4)
+        for x in range(16 - pw, 16 + pw + 1):
+            if x == 16 - pw or x == 16 + pw or y == 30:
+                pix[x, y] = PAL['black']
+            elif y == 24:
+                pix[x, y] = PAL['gold_mid']
+            else:
+                pix[x, y] = PAL['obsidian_mid'] if (x + y) % 2 == 0 else PAL['obsidian_dark']
+
+    # Prisma ottagonale/diamante fluttuante (y: 3..21, x: 7..25)
+    for y in range(3, 22):
+        if y < 12:
+            pw = (y - 3)
+        else:
+            pw = (21 - y)
+        for x in range(16 - pw, 16 + pw + 1):
+            if x == 16 - pw or x == 16 + pw:
+                pix[x, y] = PAL['crystal_dark']
+            elif x < 16:
+                pix[x, y] = PAL['crystal_high'] if x <= 16 - pw + 2 else PAL['crystal_light']
+            elif x == 16:
+                pix[x, y] = PAL['white'] if y in (6, 7, 8) else PAL['crystal_high']
+            else:
+                pix[x, y] = PAL['crystal_mid'] if (x + y) % 2 == 0 else PAL['amethyst_mid']
+
+    # Bagliore d'energia e sfere di risonanza
+    pix[16, 2] = PAL['crystal_high']
+    pix[15, 2] = PAL['white']
+    pix[16, 22] = PAL['crystal_high']
+    pix[8, 12] = PAL['crystal_high']
+    pix[24, 12] = PAL['crystal_high']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_prisma.png')
+    print('Pixel art generata: sprite_prisma.png (128x128)')
+
+
+def gen_pixel_muro_ossidiana():
+    """Barricata di Ossidiana (192x64): blocchi vulcanici scuri con giunture di malta di cristallo luminescente."""
+    w, h = 48, 16
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    for y in range(h):
+        for x in range(w):
+            if y == 0 or y == h - 1 or x == 0 or x == w - 1:
+                pix[x, y] = PAL['black']
+            elif y in (5, 10) or (y < 5 and x in (16, 32)) or (5 < y < 10 and x in (8, 24, 40)) or (y > 10 and x in (16, 32)):
+                # Giunture di malta runica scintillante ciano
+                pix[x, y] = PAL['crystal_light'] if (x + y) % 3 == 0 else PAL['crystal_dark']
+            else:
+                pix[x, y] = PAL['obsidian_mid'] if (x + y) % 4 == 0 else (PAL['obsidian_dark'] if (x + y) % 2 == 0 else PAL['obsidian_black'])
+
+    # Merli superiori e rivetti
+    for mx in (4, 12, 20, 28, 36, 44):
+        pix[mx, 2] = PAL['crystal_high']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_muro_ossidiana.png')
+    print('Pixel art generata: sprite_muro_ossidiana.png (192x64)')
+
+
+def gen_pixel_torretta_laser():
+    """Torretta Laser a Prisma (128x128): torretta girevole con lente prismatica che focalizza raggi di luce."""
+    w, h = 32, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Piedistallo ottagonale corazzato
+    for y in range(18, 31):
+        pw = min(12, (y - 18) + 8)
+        for x in range(16 - pw, 16 + pw + 1):
+            if x in (16 - pw, 16 + pw) or y in (18, 30):
+                pix[x, y] = PAL['black']
+            elif y > 26:
+                pix[x, y] = PAL['gold_dark'] if (x + y) % 2 == 0 else PAL['iron_dark']
+            else:
+                pix[x, y] = PAL['iron_mid'] if (x + y) % 2 == 0 else PAL['obsidian_mid']
+
+    # Cupola focale e lente di quarzo
+    for y in range(6, 18):
+        for x in range(10, 23):
+            dx = x - 16
+            dy = y - 12
+            d2 = dx * dx + dy * dy
+            if d2 <= 36:
+                if d2 >= 25:
+                    pix[x, y] = PAL['gold_mid']
+                elif d2 >= 9:
+                    pix[x, y] = PAL['crystal_light'] if dx < 0 else PAL['crystal_mid']
+                else:
+                    pix[x, y] = PAL['white'] if dy < 0 else PAL['crystal_high']
+
+    # Canne di focalizzazione ai 4 lati
+    pix[16, 2] = PAL['laser_cyan']
+    pix[16, 3] = PAL['laser_cyan']
+    pix[16, 4] = PAL['white']
+    pix[16, 5] = PAL['crystal_high']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_torretta_laser.png')
+    print('Pixel art generata: sprite_torretta_laser.png (128x128)')
+
+
+def gen_pixel_golem():
+    """Golem di Quarzo (128x128): mostro massiccio fatto di massi di basalto e placche di quarzo ciano."""
+    w, h = 32, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Testa / Blocco superiore
+    for y in range(4, 12):
+        for x in range(11, 21):
+            if x in (11, 20) or y in (4, 11):
+                pix[x, y] = PAL['black']
+            elif y in (7, 8) and x in (13, 14, 17, 18):
+                # Occhi scintillanti a fenditura ciano
+                pix[x, y] = PAL['crystal_high']
+            else:
+                pix[x, y] = PAL['obsidian_mid'] if (x + y) % 2 == 0 else PAL['obsidian_dark']
+
+    # Torso massiccio corazzato di cristallo
+    for y in range(12, 23):
+        for x in range(7, 25):
+            if x in (7, 24) or y == 22:
+                pix[x, y] = PAL['black']
+            elif 13 <= x <= 18 and 14 <= y <= 19:
+                # Cuore di quarzo luminoso
+                pix[x, y] = PAL['crystal_high'] if (x + y) % 2 == 0 else PAL['crystal_light']
+            else:
+                pix[x, y] = PAL['stone_mid'] if (x + y) % 3 == 0 else PAL['obsidian_mid']
+
+    # Braccia e pugni rocciosi laterali
+    for y in range(13, 27):
+        for x in range(3, 7): # braccio sx
+            if x == 3 or y == 26:
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['obsidian_dark'] if y > 20 else PAL['crystal_light']
+        for x in range(25, 29): # braccio dx
+            if x == 28 or y == 26:
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['obsidian_dark'] if y > 20 else PAL['crystal_mid']
+
+    # Gambe pesanti
+    for y in range(23, 30):
+        for x in range(9, 14):
+            pix[x, y] = PAL['obsidian_dark'] if y < 29 else PAL['black']
+        for x in range(18, 23):
+            pix[x, y] = PAL['obsidian_dark'] if y < 29 else PAL['black']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_golem.png')
+    print('Pixel art generata: sprite_golem.png (128x128)')
+
+
+def gen_pixel_spettro():
+    """Spettro di Cristallo (128x128): fantasma etereo fluttuante fatto di schegge di ametista e ciano."""
+    w, h = 32, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Testa incappucciata fluttuante
+    for y in range(4, 14):
+        rw = 6 - abs(y - 8) // 2
+        for x in range(16 - rw, 16 + rw + 1):
+            if x in (16 - rw, 16 + rw) or y == 4:
+                pix[x, y] = PAL['amethyst_dark']
+            elif y in (8, 9) and x in (14, 18):
+                pix[x, y] = PAL['crystal_high'] # Occhi spettrali
+            else:
+                pix[x, y] = PAL['amethyst_mid'] if (x + y) % 2 == 0 else PAL['amethyst_light']
+
+    # Corpo etereo con lembi fluttuanti e sfaccettature
+    for y in range(14, 28):
+        wave = int(2.5 * math.sin((y + 4) * 0.5))
+        rw = max(2, 8 - (y - 14) // 2)
+        for x in range(16 - rw + wave, 16 + rw + wave + 1):
+            if x == 16 - rw + wave or x == 16 + rw + wave or y == 27:
+                pix[x, y] = PAL['crystal_dark'] if (x + y) % 2 == 0 else PAL['amethyst_dark']
+            elif abs(x - 16 - wave) <= 2:
+                pix[x, y] = PAL['crystal_high'] if (x + y) % 3 == 0 else PAL['crystal_light']
+            else:
+                pix[x, y] = PAL['amethyst_light'] if (x + y) % 2 == 0 else PAL['amethyst_mid']
+
+    # Frammenti di cristallo orbitanti
+    shards = [(6, 12), (25, 10), (8, 22), (24, 20), (16, 2)]
+    for sx, sy in shards:
+        pix[sx, sy] = PAL['crystal_high']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_spettro.png')
+    print('Pixel art generata: sprite_spettro.png (128x128)')
+
+
+def gen_pixel_gemma():
+    """Icona Gemma Pura Raffinata (64x64): diamante/cristallo puro brillante da collezionare."""
+    w, h = 16, 16
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Profilo brillante a diamante
+    for y in range(2, 14):
+        if y < 6:
+            pw = 2 + (y - 2)
+        else:
+            pw = 5 - int((y - 6) * 0.8)
+        pw = max(0, min(6, pw))
+        left = 8 - pw
+        right = 7 + pw
+        for x in range(left, right + 1):
+            if x == left or x == right or y in (2, 13):
+                pix[x, y] = PAL['black']
+            elif y in (3, 4) and x in (7, 8):
+                pix[x, y] = PAL['white']
+            elif x < 8:
+                pix[x, y] = PAL['crystal_high'] if (x + y) % 2 == 0 else PAL['crystal_light']
+            else:
+                pix[x, y] = PAL['crystal_light'] if (x + y) % 2 == 0 else PAL['crystal_mid']
+
+    pix[7, 3] = PAL['white']
+    pix[8, 3] = PAL['white']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_gemma.png')
+    print('Pixel art generata: sprite_gemma.png (64x64)')
+
+
 def gen_pixel_hub_forgia():
     """Fucina dei Grandi Fabbri per l'Hub (128x128): camino fiammeggiante, incudine, martello e braci ardenti."""
     w, h = 32, 32
@@ -1483,6 +1957,17 @@ if __name__ == '__main__':
     gen_pixel_fungo()
     gen_pixel_muro_legno()
     gen_pixel_legno()
+    # Nuovi Sprite Caverna dei Cristalli (Fase 3)
+    gen_pixel_cristalli_sfondo()
+    gen_pixel_cristallo()
+    gen_pixel_tagliapietre()
+    gen_pixel_forziere_cristallo()
+    gen_pixel_prisma()
+    gen_pixel_muro_ossidiana()
+    gen_pixel_torretta_laser()
+    gen_pixel_golem()
+    gen_pixel_spettro()
+    gen_pixel_gemma()
     # Edifici e Personaggi Hub Interattivo
     gen_pixel_hub_forgia()
     gen_pixel_hub_taverna()

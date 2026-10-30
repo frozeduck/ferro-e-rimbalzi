@@ -64,6 +64,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private Bitmap bmpWood;
     private Bitmap bmpBg;
     private Bitmap bmpBgForesta;
+    private Bitmap bmpBgCristalli;
+    private Bitmap bmpCrystalMine;
+    private Bitmap bmpGemcutter;
+    private Bitmap bmpCrystalVault;
+    private Bitmap bmpPrism;
+    private Bitmap bmpCrystalWall;
+    private Bitmap bmpLaserTurret;
+    private Bitmap bmpGolem;
+    private Bitmap bmpSpectre;
+    private Bitmap bmpGem;
 
     // Sprite Edifici e Personaggi Hub Interattivo
     private Bitmap bmpHubForge;
@@ -143,9 +153,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private final RectF btnTavernCharge = new RectF(40f, 450f, 500f, 550f);
 
     // Finestra Modale Portale Spedizioni
-    private final RectF cardMineIron = new RectF(25f, 210f, 515f, 350f);
-    private final RectF cardForestWood = new RectF(25f, 370f, 515f, 510f);
-    private final RectF btnStartExpedition = new RectF(50f, 530f, 490f, 605f);
+    private final RectF cardMineIron = new RectF(25f, 140f, 515f, 250f);
+    private final RectF cardForestWood = new RectF(25f, 262f, 515f, 372f);
+    private final RectF cardCrystalCave = new RectF(25f, 384f, 515f, 494f);
+    private final RectF btnStartExpedition = new RectF(50f, 514f, 490f, 584f);
 
     // Tasto chiudi modale per tornare alla piazza
     private final RectF btnModalClose = new RectF(130f, 630f, 410f, 695f);
@@ -225,7 +236,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             android.content.SharedPreferences sp = context.getSharedPreferences("clan_vault", Context.MODE_PRIVATE);
             game.clanIron = sp.getInt("clan_iron", 0);
             game.clanWood = sp.getInt("clan_wood", 0);
+            game.clanGems = sp.getInt("clan_gems", 0);
             game.forestUnlocked = sp.getBoolean("forest_unlocked", false);
+            game.crystalUnlocked = sp.getBoolean("crystal_unlocked", false);
             game.clanUpgradeHp = sp.getInt("clan_upgrade_hp", 0);
             game.clanUpgradeCapacity = sp.getInt("clan_upgrade_cap", 0);
             game.clanUpgradeDamage = sp.getInt("clan_upgrade_dmg", 0);
@@ -233,6 +246,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             game.clanRunsWon = sp.getInt("clan_runs_won", 0);
             game.clanTotalMined = sp.getInt("clan_total_mined", 0);
             game.clanTotalWood = sp.getInt("clan_total_wood", 0);
+            game.clanTotalGems = sp.getInt("clan_total_gems", 0);
             game.clanTotalKills = sp.getInt("clan_total_kills", 0);
         } catch (Throwable t) {
             android.util.Log.e("GameView", "Failed to load clan progress", t);
@@ -245,7 +259,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             sp.edit()
                 .putInt("clan_iron", game.clanIron)
                 .putInt("clan_wood", game.clanWood)
+                .putInt("clan_gems", game.clanGems)
                 .putBoolean("forest_unlocked", game.forestUnlocked)
+                .putBoolean("crystal_unlocked", game.crystalUnlocked)
                 .putInt("clan_upgrade_hp", game.clanUpgradeHp)
                 .putInt("clan_upgrade_cap", game.clanUpgradeCapacity)
                 .putInt("clan_upgrade_dmg", game.clanUpgradeDamage)
@@ -253,6 +269,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                 .putInt("clan_runs_won", game.clanRunsWon)
                 .putInt("clan_total_mined", game.clanTotalMined)
                 .putInt("clan_total_wood", game.clanTotalWood)
+                .putInt("clan_total_gems", game.clanTotalGems)
                 .putInt("clan_total_kills", game.clanTotalKills)
                 .apply();
         } catch (Throwable t) {
@@ -280,6 +297,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             bmpWood = BitmapFactory.decodeResource(res, R.drawable.sprite_legno);
             bmpBg = BitmapFactory.decodeResource(res, R.drawable.sfondo_caverna);
             bmpBgForesta = BitmapFactory.decodeResource(res, R.drawable.sfondo_foresta);
+            bmpBgCristalli = BitmapFactory.decodeResource(res, R.drawable.sfondo_cristalli);
+            bmpCrystalMine = BitmapFactory.decodeResource(res, R.drawable.sprite_cristallo);
+            bmpGemcutter = BitmapFactory.decodeResource(res, R.drawable.sprite_tagliapietre);
+            bmpCrystalVault = BitmapFactory.decodeResource(res, R.drawable.sprite_forziere_cristallo);
+            bmpPrism = BitmapFactory.decodeResource(res, R.drawable.sprite_prisma);
+            bmpCrystalWall = BitmapFactory.decodeResource(res, R.drawable.sprite_muro_ossidiana);
+            bmpLaserTurret = BitmapFactory.decodeResource(res, R.drawable.sprite_torretta_laser);
+            bmpGolem = BitmapFactory.decodeResource(res, R.drawable.sprite_golem);
+            bmpSpectre = BitmapFactory.decodeResource(res, R.drawable.sprite_spettro);
+            bmpGem = BitmapFactory.decodeResource(res, R.drawable.sprite_gemma);
 
             // Sprite Hub Interattivo
             bmpHubForge = BitmapFactory.decodeResource(res, R.drawable.sprite_hub_forgia);
@@ -388,10 +415,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         btnTavernSpeed.set(40f, safeInsetTop + 335f, 500f, safeInsetTop + 435f);
         btnTavernCharge.set(40f, safeInsetTop + 450f, 500f, safeInsetTop + 550f);
 
-        cardMineIron.set(25f, safeInsetTop + 210f, 515f, safeInsetTop + 350f);
-        cardForestWood.set(25f, safeInsetTop + 370f, 515f, safeInsetTop + 510f);
-        btnStartExpedition.set(50f, safeInsetTop + 530f, 490f, safeInsetTop + 605f);
-        btnModalClose.set(130f, safeInsetTop + 630f, 410f, safeInsetTop + 695f);
+        cardMineIron.set(25f, safeInsetTop + 140f, 515f, safeInsetTop + 250f);
+        cardForestWood.set(25f, safeInsetTop + 262f, 515f, safeInsetTop + 372f);
+        cardCrystalCave.set(25f, safeInsetTop + 384f, 515f, safeInsetTop + 494f);
+        btnStartExpedition.set(50f, safeInsetTop + 514f, 490f, safeInsetTop + 584f);
+        btnModalClose.set(130f, safeInsetTop + 604f, 410f, safeInsetTop + 664f);
         btnReturnHub.set(150f, safeInsetTop + 650f, 390f, safeInsetTop + 715f);
 
         float midY = vH / 2f;
@@ -682,6 +710,18 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                     } else {
                         AudioHelper.playAnvil();
                     }
+                } else if (cardCrystalCave.contains(tx, ty)) {
+                    if (game.crystalUnlocked) {
+                        game.selectedBiome = "crystal_cave";
+                        AudioHelper.playAnvil();
+                    } else if (game.clanIron >= 18 && game.clanWood >= 14) {
+                        game.unlockCrystal();
+                        saveClanProgress(getContext());
+                        game.selectedBiome = "crystal_cave";
+                        AudioHelper.playWarhorn();
+                    } else {
+                        AudioHelper.playAnvil();
+                    }
                 } else if (btnStartExpedition.contains(tx, ty)) {
                     game.startExpedition(game.selectedBiome);
                     saveClanProgress(getContext());
@@ -764,13 +804,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                 return;
             }
             if (btnWall.contains(tx, ty)) {
-                String wallType = "forest_wood".equals(game.selectedBiome) ? "wood_wall" : "wall";
+                String wallType = "crystal_cave".equals(game.selectedBiome) ? "crystal_wall" :
+                        ("forest_wood".equals(game.selectedBiome) ? "wood_wall" : "wall");
                 placingType = wallType.equals(placingType) ? null : wallType;
                 AudioHelper.playAnvil();
                 return;
             }
             if (btnTurret.contains(tx, ty)) {
-                placingType = "turret".equals(placingType) ? null : "turret";
+                String turretType = "crystal_cave".equals(game.selectedBiome) ? "laser_turret" : "turret";
+                placingType = turretType.equals(placingType) ? null : turretType;
                 AudioHelper.playAnvil();
                 return;
             }
@@ -900,7 +942,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         // Rendering pixel art sfondo caverna o foresta SENZA stiramenti:
         // Ripetiamo la texture verticalmente lungo virtualH mantenendo
         // rigorosamente il rapporto 1:1 dei pixel quadrati su qualsiasi schermo (Flip 7, 21:9, 16:9)
-        Bitmap bg = ("forest_wood".equals(game.selectedBiome) && bmpBgForesta != null) ? bmpBgForesta : bmpBg;
+        boolean isCrystal = "crystal_cave".equals(game.selectedBiome);
+        boolean isForest = "forest_wood".equals(game.selectedBiome);
+        Bitmap bg = (isCrystal && bmpBgCristalli != null) ? bmpBgCristalli :
+                ((isForest && bmpBgForesta != null) ? bmpBgForesta : bmpBg);
         if (bg != null) {
             for (float y = 0f; y < virtualH; y += 960f) {
                 tempRect.set(0f, y, Game.W, y + 960f);
@@ -908,11 +953,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             }
         }
 
-        boolean isForest = "forest_wood".equals(game.selectedBiome);
-        int glowColor = isForest ? 0x4410B981 : 0x44FF8A00;
-        int glowTransparent = isForest ? 0x0010B981 : 0x00FF8A00;
+        int glowColor = isCrystal ? 0x4406B6D4 : (isForest ? 0x4410B981 : 0x44FF8A00);
+        int glowTransparent = isCrystal ? 0x0006B6D4 : (isForest ? 0x0010B981 : 0x00FF8A00);
 
-        // Luce calda delle torce o verde smeraldo delle lanterne silvane
+        // Luce calda delle torce, smeraldo del bosco o azzurro ciano dei cristalli
         paintGlow.setStyle(Paint.Style.FILL);
         paintGlow.setShader(new RadialGradient(40f, 100f, 200f, glowColor, glowTransparent, Shader.TileMode.CLAMP));
         canvas.drawCircle(40f, 100f, 200f, paintGlow);
@@ -920,9 +964,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.drawCircle(Game.W - 40f, 100f, 200f, paintGlow);
         paintGlow.setShader(null);
 
-        // Faville di forgia o spore silvane fluttuanti
+        // Faville di forgia, spore silvane o polvere di cristallo scintillante
         for (Sparkle s : sparkles) {
-            if (isForest) {
+            if (isCrystal) {
+                paintFill.setColor(Color.argb(s.alpha, 103, 232, 249));
+            } else if (isForest) {
                 paintFill.setColor(Color.argb(s.alpha, 110, 240, 180));
             } else {
                 paintFill.setColor(Color.argb(s.alpha, 255, 170, 60));
@@ -960,15 +1006,19 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         // Funghi elastici bouncers del Bosco dei Nani
         drawMushrooms(canvas);
 
-        // Dardi infuocati scagliati dalle Baliste
+        // Prismi di risonanza cristallina della Caverna dei Cristalli
+        drawPrisms(canvas);
+
+        // Dardi infuocati scagliati dalle Baliste o Raggi Laser prismatici
         for (Game.Shot shot : game.shots) {
+            boolean isLaserShot = shot.life > 0.22f;
             paintStroke.setStyle(Paint.Style.STROKE);
-            paintStroke.setStrokeWidth(3.5f);
-            int alpha = (int) (255 * (shot.life / 0.2f));
-            paintStroke.setColor(Color.argb(alpha, 245, 158, 11));
+            paintStroke.setStrokeWidth(isLaserShot ? 4.5f : 3.5f);
+            int alpha = (int) (255 * (shot.life / (isLaserShot ? 0.3f : 0.2f)));
+            paintStroke.setColor(isLaserShot ? Color.argb(alpha, 6, 182, 212) : Color.argb(alpha, 245, 158, 11));
             canvas.drawLine(shot.x, shot.y, shot.tx, shot.ty, paintStroke);
-            paintStroke.setStrokeWidth(1.5f);
-            paintStroke.setColor(Color.argb(alpha, 255, 255, 230));
+            paintStroke.setStrokeWidth(isLaserShot ? 2.5f : 1.5f);
+            paintStroke.setColor(Color.argb(alpha, 255, 255, 255));
             canvas.drawLine(shot.x, shot.y, shot.tx, shot.ty, paintStroke);
         }
 
@@ -1107,14 +1157,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawOreVein(Canvas canvas, Game.Mine m, int index) {
+        boolean isCrystal = "crystal_cave".equals(game.selectedBiome);
         boolean isForest = "forest_wood".equals(game.selectedBiome);
-        Bitmap bmp = isForest && bmpTree != null ? bmpTree : bmpMine;
+        Bitmap bmp = isCrystal && bmpCrystalMine != null ? bmpCrystalMine :
+                (isForest && bmpTree != null ? bmpTree : bmpMine);
         if (bmp != null) {
             drawPreservingAspect(canvas, bmp, m.x, m.y, m.w, m.h);
         } else {
             tempRect.set(m.x, m.y, m.x + m.w, m.y + m.h);
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(isForest ? 0xFF14532D : 0xFF2D241E);
+            paintFill.setColor(isCrystal ? 0xFF0E344E : (isForest ? 0xFF14532D : 0xFF2D241E));
             canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
         }
 
@@ -1123,31 +1175,38 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             tempRect.set(m.x, m.y, m.x + m.w, m.y + m.h);
             paintStroke.setStyle(Paint.Style.STROKE);
             paintStroke.setStrokeWidth(3f);
-            paintStroke.setColor(0xFFFEF3C7);
+            paintStroke.setColor(isCrystal ? 0xFF67E8F9 : 0xFFFEF3C7);
             canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
         }
     }
 
     private void drawBuilding(Canvas canvas, Game.Building b) {
-        if ("wall".equals(b.type) || "wood_wall".equals(b.type)) {
+        if ("wall".equals(b.type) || "wood_wall".equals(b.type) || "crystal_wall".equals(b.type)) {
             // Le mura e barricate coprono l'intera larghezza e altezza del box di collisione
             tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
-            Bitmap wallBmp = "wood_wall".equals(b.type) && bmpWoodWall != null ? bmpWoodWall : bmpWall;
+            Bitmap wallBmp = "crystal_wall".equals(b.type) && bmpCrystalWall != null ? bmpCrystalWall :
+                    ("wood_wall".equals(b.type) && bmpWoodWall != null ? bmpWoodWall : bmpWall);
             if (wallBmp != null) {
                 canvas.drawBitmap(wallBmp, null, tempRect, paintPixel);
             } else {
                 paintFill.setStyle(Paint.Style.FILL);
-                paintFill.setColor("wood_wall".equals(b.type) ? 0xFF78350F : 0xFF383532);
+                paintFill.setColor("crystal_wall".equals(b.type) ? 0xFF1E1430 : ("wood_wall".equals(b.type) ? 0xFF78350F : 0xFF383532));
                 canvas.drawRoundRect(tempRect, 3f, 3f, paintFill);
             }
         } else {
             Bitmap bmp = null;
             if ("forge".equals(b.type)) {
                 bmp = game.forgeOpen ? bmpForgeOpen : bmpForgeClosed;
+            } else if ("gemcutter".equals(b.type)) {
+                bmp = bmpGemcutter;
             } else if ("sawmill".equals(b.type)) {
                 bmp = bmpSawmill;
+            } else if ("crystal_vault".equals(b.type)) {
+                bmp = bmpCrystalVault;
             } else if ("vault".equals(b.type) || "depot".equals(b.type)) {
                 bmp = bmpVault;
+            } else if ("laser_turret".equals(b.type)) {
+                bmp = bmpLaserTurret;
             } else if ("turret".equals(b.type)) {
                 bmp = bmpTurret;
             }
@@ -1157,7 +1216,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             } else {
                 tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
                 paintFill.setStyle(Paint.Style.FILL);
-                paintFill.setColor("forge".equals(b.type) ? 0xFF1C1917 : "sawmill".equals(b.type) ? 0xFF382214 : 0xFF3B1A0A);
+                paintFill.setColor("gemcutter".equals(b.type) ? 0xFF14243B : ("forge".equals(b.type) ? 0xFF1C1917 : "sawmill".equals(b.type) ? 0xFF382214 : 0xFF3B1A0A));
                 canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
             }
         }
@@ -1197,14 +1256,37 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         }
     }
 
+    private void drawPrisms(Canvas canvas) {
+        for (Game.Prism p : game.prisms) {
+            if (bmpPrism != null) {
+                drawPreservingAspect(canvas, bmpPrism, p.x, p.y, p.w, p.h);
+            } else {
+                tempRect.set(p.x, p.y, p.x + p.w, p.y + p.h);
+                paintFill.setStyle(Paint.Style.FILL);
+                paintFill.setColor(0xFF06B6D4);
+                canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+            }
+            if (p.pulseTime > 0f) {
+                float pulseAlpha = p.pulseTime / 0.5f;
+                paintStroke.setStyle(Paint.Style.STROKE);
+                paintStroke.setStrokeWidth(3f);
+                paintStroke.setColor(Color.argb((int)(200 * pulseAlpha), 103, 232, 249));
+                float r = (p.w / 2f) + (1f - pulseAlpha) * 20f;
+                canvas.drawCircle(p.x + p.w / 2f, p.y + p.h / 2f, r, paintStroke);
+            }
+        }
+    }
+
     private void drawMonster(Canvas canvas, Game.Enemy e) {
-        Bitmap enemyBmp = "spider".equals(e.type) && bmpSpider != null ? bmpSpider : bmpGoblin;
+        Bitmap enemyBmp = "golem".equals(e.type) && bmpGolem != null ? bmpGolem :
+                ("spectre".equals(e.type) && bmpSpectre != null ? bmpSpectre :
+                ("spider".equals(e.type) && bmpSpider != null ? bmpSpider : bmpGoblin));
         if (enemyBmp != null) {
             drawPreservingAspect(canvas, enemyBmp, e.x, e.y, e.w, e.h);
         } else {
             tempRect.set(e.x, e.y, e.x + e.w, e.y + e.h);
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor("spider".equals(e.type) ? 0xFF581C87 : "treant".equals(e.type) ? 0xFF14532D : 0xFF16A34A);
+            paintFill.setColor("golem".equals(e.type) ? 0xFF0E344E : ("spectre".equals(e.type) ? 0xFF3B1B54 : ("spider".equals(e.type) ? 0xFF581C87 : 0xFF16A34A)));
             canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
         }
 
@@ -1216,7 +1298,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             float by = e.y - 7f;
             paintFill.setColor(0xFF7F1D1D);
             canvas.drawRect(bx, by, bx + barW, by + barH, paintFill);
-            paintFill.setColor("spider".equals(e.type) ? 0xFFA855F7 : 0xFF22C55E);
+            paintFill.setColor("golem".equals(e.type) ? 0xFF06B6D4 : ("spectre".equals(e.type) ? 0xFFA855F7 : ("spider".equals(e.type) ? 0xFFA855F7 : 0xFF22C55E)));
             float fillW = barW * ((float) e.hp / e.maxHp);
             canvas.drawRect(bx, by, bx + fillW, by + barH, paintFill);
         }
@@ -1258,29 +1340,48 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawRunicTrail(Canvas canvas) {
-        int tSize = game.ball.trail.size();
+        drawSingleTrail(canvas, game.ball);
+        if (game.extraBall != null) {
+            drawSingleTrail(canvas, game.extraBall);
+        }
+    }
+
+    private void drawSingleTrail(Canvas canvas, Game.Ball b) {
+        int tSize = b.trail.size();
         for (int i = tSize - 1; i >= 0; i--) {
-            Game.PointF t = game.ball.trail.get(i);
+            Game.PointF t = b.trail.get(i);
             float ratio = 1f - (float) i / (tSize + 1);
             int alpha = (int) (140 * ratio);
             paintFill.setStyle(Paint.Style.FILL);
-            if (game.burn) {
+            if (b.isClone) {
+                paintFill.setColor(Color.argb(alpha, 6, 182, 212));
+            } else if (game.burn) {
                 paintFill.setColor(Color.argb(alpha, 249, 115, 22));
             } else {
                 paintFill.setColor(Color.argb(alpha, 245, 158, 11));
             }
-            canvas.drawCircle(t.x, t.y, game.ball.r * ratio * 0.95f, paintFill);
+            canvas.drawCircle(t.x, t.y, b.r * ratio * 0.95f, paintFill);
         }
     }
 
     private void drawRunicOrb(Canvas canvas) {
+        drawSingleOrb(canvas, game.ball);
+        if (game.extraBall != null) {
+            drawSingleOrb(canvas, game.extraBall);
+        }
+    }
+
+    private void drawSingleOrb(Canvas canvas, Game.Ball b) {
         canvas.save();
-        canvas.translate(game.ball.x, game.ball.y);
+        canvas.translate(b.x, b.y);
         canvas.scale(ballSquashX, ballSquashY);
 
-        float glowR = Math.max(5f, game.ball.r * 1.8f);
+        float glowR = Math.max(5f, b.r * 1.8f);
         paintGlow.setStyle(Paint.Style.FILL);
-        if (game.burn) {
+        if (b.isClone) {
+            paintGlow.setShader(new RadialGradient(0f, 0f, glowR,
+                    0xFF06B6D4, 0x000891B2, Shader.TileMode.CLAMP));
+        } else if (game.burn) {
             paintGlow.setShader(new RadialGradient(0f, 0f, glowR,
                     0xFFFF5500, 0x00FF0000, Shader.TileMode.CLAMP));
         } else {
@@ -1290,34 +1391,43 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.drawCircle(0f, 0f, glowR, paintGlow);
         paintGlow.setShader(null);
 
-        tempRect.set(-game.ball.r * 1.25f, -game.ball.r * 1.25f, game.ball.r * 1.25f, game.ball.r * 1.25f);
+        tempRect.set(-b.r * 1.25f, -b.r * 1.25f, b.r * 1.25f, b.r * 1.25f);
         if (bmpOrb != null) {
             canvas.drawBitmap(bmpOrb, null, tempRect, paintPixel);
+            if (b.isClone) {
+                paintStroke.setStyle(Paint.Style.STROKE);
+                paintStroke.setStrokeWidth(2f);
+                paintStroke.setColor(0xFF67E8F9);
+                canvas.drawCircle(0f, 0f, b.r + 1f, paintStroke);
+            }
         } else {
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(game.burn ? 0xFFFFD700 : 0xFFE7E5E4);
-            canvas.drawCircle(0f, 0f, game.ball.r, paintFill);
+            paintFill.setColor(b.isClone ? 0xFF06B6D4 : (game.burn ? 0xFFFFD700 : 0xFFE7E5E4));
+            canvas.drawCircle(0f, 0f, b.r, paintFill);
         }
 
         canvas.restore();
 
-        if (game.cargo() > 0) {
-            int total = game.cargo();
+        int totalCargo = b.ore + b.metal;
+        if (totalCargo > 0) {
+            int total = totalCargo;
+            boolean isCrystal = "crystal_cave".equals(game.selectedBiome);
+            boolean isForest = "forest_wood".equals(game.selectedBiome);
             for (int i = 0; i < total; i++) {
                 double a = i * 2.0 * Math.PI / total + game.elapsed * 2.2;
-                float px = game.ball.x + (float) Math.cos(a) * 18f;
-                float py = game.ball.y + (float) Math.sin(a) * 11f;
+                float px = b.x + (float) Math.cos(a) * 18f;
+                float py = b.y + (float) Math.sin(a) * 11f;
 
                 paintFill.setStyle(Paint.Style.FILL);
-                if (i < game.ball.metal) {
-                    paintFill.setColor(0xFFFBBF24);
+                if (i < b.metal) {
+                    paintFill.setColor(isCrystal ? 0xFF06B6D4 : (isForest ? 0xFF10B981 : 0xFFFBBF24));
                     canvas.drawRect(px - 4f, py - 3f, px + 4f, py + 3f, paintFill);
                     paintStroke.setStyle(Paint.Style.STROKE);
                     paintStroke.setStrokeWidth(1f);
                     paintStroke.setColor(0xFFFFFBEB);
                     canvas.drawRect(px - 4f, py - 3f, px + 4f, py + 3f, paintStroke);
                 } else {
-                    paintFill.setColor(0xFF78350F);
+                    paintFill.setColor(isCrystal ? 0xFF0284C7 : (isForest ? 0xFF14532D : 0xFF78350F));
                     canvas.drawCircle(px, py, 3.5f, paintFill);
                     paintStroke.setStyle(Paint.Style.STROKE);
                     paintStroke.setStrokeWidth(1f);
@@ -1329,7 +1439,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             paintText.setTextSize(11f);
             paintText.setColor(0xFFFEF3C7);
             paintText.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText(game.ball.ore + " Min · " + game.ball.metal + " Ferro", game.ball.x, game.ball.y - 20f, paintText);
+            String cargoLabel = isCrystal ? (b.ore + " Cristalli · " + b.metal + " Gemme") :
+                    (isForest ? (b.ore + " Tronchi · " + b.metal + " Assi") :
+                    (b.ore + " Min · " + b.metal + " Ferro"));
+            canvas.drawText(cargoLabel, b.x, b.y - 20f, paintText);
         }
     }
 
@@ -1420,12 +1533,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintStroke.setColor(0xFFB45309);
         canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
 
+        boolean isCrystal = "crystal_cave".equals(game.selectedBiome);
         boolean isForest = "forest_wood".equals(game.selectedBiome);
         paintText.setTextAlign(Paint.Align.LEFT);
         paintText.setTextSize(13f);
-        paintText.setColor(isForest ? 0xFF34D399 : 0xFFF59E0B);
-        canvas.drawText(isForest ? ("Legno: " + game.iron) : ("Ferro: " + game.iron + " Fe"), 257f, topY + 22f, paintText);
-        paintText.setColor(isForest ? 0xFFA7F3D0 : 0xFF34D399);
+        paintText.setColor(isCrystal ? 0xFF67E8F9 : (isForest ? 0xFF34D399 : 0xFFF59E0B));
+        String resLabel = isCrystal ? ("Gemme: " + game.iron) : (isForest ? ("Legno: " + game.iron) : ("Ferro: " + game.iron + " Fe"));
+        canvas.drawText(resLabel, 257f, topY + 22f, paintText);
+        paintText.setColor(isCrystal ? 0xFFA5F3FC : (isForest ? 0xFFA7F3D0 : 0xFF34D399));
         canvas.drawText("In Cassa: " + game.delivered + "/" + game.target, 257f, topY + 44f, paintText);
 
         // 4. Scheda TEMPO (x=382f..432f)
@@ -1503,23 +1618,24 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                     ready ? 0xFFFFFBEB : 0xFF78716C);
 
         } else if ("build".equals(game.phase)) {
-            String wallType = isForest ? "wood_wall" : "wall";
+            String wallType = isCrystal ? "crystal_wall" : (isForest ? "wood_wall" : "wall");
             boolean selWall = wallType.equals(placingType);
             boolean canWall = game.iron >= Game.COST_WALL;
             drawFantasyButton(canvas, btnWall,
-                    isForest ? "+ BARRICATA (3 Legno)" : "+ MURA (3 Fe)",
-                    selWall ? "▶ POSIZIONA..." : (isForest ? "Tronchi appuntiti" : "Mura in pietra"),
+                    isCrystal ? "+ OSSIDIANA (3 Gemme)" : (isForest ? "+ BARRICATA (3 Legno)" : "+ MURA (3 Fe)"),
+                    selWall ? "▶ POSIZIONA..." : (isCrystal ? "Barricata vulcanica" : (isForest ? "Tronchi appuntiti" : "Mura in pietra")),
                     selWall ? 0xFF047857 : (canWall ? 0xFF065F46 : 0xFF292524),
                     canWall ? 0xFFD1FAE5 : 0xFF78716C);
 
-            boolean selTurret = "turret".equals(placingType);
-            int turretCost = isForest ? 6 : Game.COST_TURRET;
+            String turretType = isCrystal ? "laser_turret" : "turret";
+            boolean selTurret = turretType.equals(placingType);
+            int turretCost = isCrystal ? 7 : (isForest ? 6 : Game.COST_TURRET);
             boolean canTurret = game.iron >= turretCost;
             drawFantasyButton(canvas, btnTurret,
-                    isForest ? "+ BALISTA (6 Legno)" : "+ BALISTA (7 Fe)",
-                    selTurret ? "▶ POSIZIONA..." : "Dardi automatici",
-                    selTurret ? 0xFFD97706 : (canTurret ? 0xFF92400E : 0xFF292524),
-                    canTurret ? 0xFFFEF3C7 : 0xFF78716C);
+                    isCrystal ? "+ LASER (7 Gemme)" : (isForest ? "+ BALISTA (6 Legno)" : "+ BALISTA (7 Fe)"),
+                    selTurret ? "▶ POSIZIONA..." : (isCrystal ? "Lente prismatica" : "Dardi automatici"),
+                    selTurret ? 0xFF0891B2 : (canTurret ? 0xFF0E7490 : 0xFF292524),
+                    canTurret ? 0xFFA5F3FC : 0xFF78716C);
 
             drawFantasyButton(canvas, btnStartWave,
                     "SUONA L'ALLARME ➔",
@@ -1852,7 +1968,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
         paintText.setTextSize(13f);
         paintText.setColor(0xFFF59E0B);
-        canvas.drawText("Ferro: " + game.clanIron + " Fe   |   Legname: " + game.clanWood + "   |   Raid Vinti: " + game.clanRunsWon, tempRect.centerX(), safeInsetTop + 152f, paintText);
+        canvas.drawText("Fe: " + game.clanIron + " | Legno: " + game.clanWood + " | Gemme: " + game.clanGems + " | Raid: " + game.clanRunsWon, tempRect.centerX(), safeInsetTop + 152f, paintText);
 
         // 1. FUCINA DEI FABBRI (In alto a SX)
         tempRect.set(cardHubForge);
@@ -2114,8 +2230,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintText.setTextSize(13f);
         paintText.setColor(0xFFD6D3D1);
         canvas.drawText("• Ferro grezzo & raffinato nel tesoro: " + game.clanIron + " Fe", tempRect.left + 20f, tempRect.top + 70f, paintText);
-        canvas.drawText("• Legname pregiato accatastato: " + game.clanWood + " tronchi", tempRect.left + 20f, tempRect.top + 102f, paintText);
-        canvas.drawText("• Territori nanici esplorati: " + (1 + (game.forestUnlocked ? 1 : 0)) + " / 3 biomi", tempRect.left + 20f, tempRect.top + 134f, paintText);
+        canvas.drawText("• Legname pregiato accatastato: " + game.clanWood + " tronchi", tempRect.left + 20f, tempRect.top + 98f, paintText);
+        canvas.drawText("• Gemme runiche pure nel caveau: " + game.clanGems + " gemme", tempRect.left + 20f, tempRect.top + 126f, paintText);
+        canvas.drawText("• Territori nanici esplorati: " + (1 + (game.forestUnlocked ? 1 : 0) + (game.crystalUnlocked ? 1 : 0)) + " / 3 biomi", tempRect.left + 20f, tempRect.top + 154f, paintText);
 
         // Riquadro 2: Annali di Guerra
         tempRect.set(30f, 335f, Game.W - 30f, 550f);
@@ -2129,10 +2246,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.drawText("ANNALI DELLE BATTAGLIE", tempRect.left + 20f, tempRect.top + 34f, paintText);
         paintText.setTextSize(13f);
         paintText.setColor(0xFFD6D3D1);
-        canvas.drawText("• Spedizioni concluse con vittoria: " + game.clanRunsWon, tempRect.left + 20f, tempRect.top + 70f, paintText);
-        canvas.drawText("• Minerale totale estratto con la sfera: " + game.clanTotalMined, tempRect.left + 20f, tempRect.top + 102f, paintText);
-        canvas.drawText("• Legname totale ricavato dalla foresta: " + game.clanTotalWood, tempRect.left + 20f, tempRect.top + 134f, paintText);
-        canvas.drawText("• Mostri e invasori annientati: " + game.clanTotalKills, tempRect.left + 20f, tempRect.top + 166f, paintText);
+        canvas.drawText("• Spedizioni concluse con vittoria: " + game.clanRunsWon, tempRect.left + 20f, tempRect.top + 65f, paintText);
+        canvas.drawText("• Minerale totale estratto con la sfera: " + game.clanTotalMined, tempRect.left + 20f, tempRect.top + 92f, paintText);
+        canvas.drawText("• Legname totale ricavato dalla foresta: " + game.clanTotalWood, tempRect.left + 20f, tempRect.top + 119f, paintText);
+        canvas.drawText("• Gemme totali scavate nelle caverne: " + game.clanTotalGems, tempRect.left + 20f, tempRect.top + 146f, paintText);
+        canvas.drawText("• Mostri e invasori annientati: " + game.clanTotalKills, tempRect.left + 20f, tempRect.top + 173f, paintText);
 
         drawModalCloseButton(canvas);
     }
@@ -2169,7 +2287,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.drawText("Spacca la roccia e forgia lingotti.", cardMineIron.left + 125f, cardMineIron.top + 82f, paintText);
         paintText.setTextSize(12f);
         paintText.setColor(selIron ? 0xFF34D399 : 0xFF94A3B8);
-        canvas.drawText(selIron ? "● SELEZIONATA" : "Tocca per selezionare", cardMineIron.left + 125f, cardMineIron.top + 110f, paintText);
+        canvas.drawText(selIron ? "● SELEZIONATA" : "Tocca per selezionare", cardMineIron.left + 125f, cardMineIron.top + 104f, paintText);
 
         // Scheda 2: Bosco dei Nani
         boolean selForest = "forest_wood".equals(game.selectedBiome);
@@ -2192,13 +2310,44 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             canvas.drawText("Raccogli legname e respingi i ragni.", cardForestWood.left + 125f, cardForestWood.top + 82f, paintText);
             paintText.setTextSize(12f);
             paintText.setColor(selForest ? 0xFF34D399 : 0xFF94A3B8);
-            canvas.drawText(selForest ? "● SELEZIONATA" : "Tocca per selezionare", cardForestWood.left + 125f, cardForestWood.top + 110f, paintText);
+            canvas.drawText(selForest ? "● SELEZIONATA" : "Tocca per selezionare", cardForestWood.left + 125f, cardForestWood.top + 104f, paintText);
         } else {
             paintText.setColor(game.clanIron >= 14 ? 0xFFFBBF24 : 0xFFEF4444);
             canvas.drawText("Richiede 14 Ferro (Hai: " + game.clanIron + ")", cardForestWood.left + 125f, cardForestWood.top + 82f, paintText);
             paintText.setTextSize(12f);
             paintText.setColor(game.clanIron >= 14 ? 0xFFFBBF24 : 0xFF71717A);
-            canvas.drawText(game.clanIron >= 14 ? "TOCCA PER SBLOCCARE (14 Fe)" : "BLOCCATA", cardForestWood.left + 125f, cardForestWood.top + 110f, paintText);
+            canvas.drawText(game.clanIron >= 14 ? "TOCCA PER SBLOCCARE (14 Fe)" : "BLOCCATA", cardForestWood.left + 125f, cardForestWood.top + 104f, paintText);
+        }
+
+        // Scheda 3: Caverna dei Cristalli
+        boolean selCrystal = "crystal_cave".equals(game.selectedBiome);
+        tempRect.set(cardCrystalCave);
+        paintFill.setColor(selCrystal ? 0xFF1E1430 : 0xFF171717);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintFill);
+        paintStroke.setColor(!game.crystalUnlocked ? 0xFF52525B : selCrystal ? 0xFF06B6D4 : 0xFF0891B2);
+        paintStroke.setStrokeWidth(selCrystal ? 3f : 1.5f);
+        canvas.drawRoundRect(tempRect, 10f, 10f, paintStroke);
+        drawPreservingAspect(canvas, bmpPrism != null ? bmpPrism : bmpShield, cardCrystalCave.left + 16f, cardCrystalCave.top + 18f, 96f, 72f);
+        paintText.setTextAlign(Paint.Align.LEFT);
+        paintText.setTextSize(16f);
+        paintText.setColor(game.crystalUnlocked ? 0xFF67E8F9 : 0xFFA1A1AA);
+        canvas.drawText("CAVERNA DEI CRISTALLI", cardCrystalCave.left + 125f, cardCrystalCave.top + 36f, paintText);
+        paintText.setTextSize(11f);
+        paintText.setColor(0xFFE2E8F0);
+        canvas.drawText("Gimmick: Prismi Risonanti & Multiball", cardCrystalCave.left + 125f, cardCrystalCave.top + 60f, paintText);
+        if (game.crystalUnlocked) {
+            paintText.setColor(0xFFD6D3D1);
+            canvas.drawText("Estrai cristalli puri e taglia gemme.", cardCrystalCave.left + 125f, cardCrystalCave.top + 82f, paintText);
+            paintText.setTextSize(12f);
+            paintText.setColor(selCrystal ? 0xFF34D399 : 0xFF94A3B8);
+            canvas.drawText(selCrystal ? "● SELEZIONATA" : "Tocca per selezionare", cardCrystalCave.left + 125f, cardCrystalCave.top + 104f, paintText);
+        } else {
+            boolean canUnlockCrystal = game.clanIron >= 18 && game.clanWood >= 14;
+            paintText.setColor(canUnlockCrystal ? 0xFFFBBF24 : 0xFFEF4444);
+            canvas.drawText("Richiede 18 Fe + 14 Legno", cardCrystalCave.left + 125f, cardCrystalCave.top + 82f, paintText);
+            paintText.setTextSize(12f);
+            paintText.setColor(canUnlockCrystal ? 0xFFFBBF24 : 0xFF71717A);
+            canvas.drawText(canUnlockCrystal ? "TOCCA PER SBLOCCARE (18 Fe + 14 Legno)" : "BLOCCATA", cardCrystalCave.left + 125f, cardCrystalCave.top + 104f, paintText);
         }
 
         // Tasto Avvia Spedizione
@@ -2210,7 +2359,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintText.setTextAlign(Paint.Align.CENTER);
         paintText.setTextSize(17f);
         paintText.setColor(0xFFFFFFFF);
-        String startLabel = "mine_iron".equals(game.selectedBiome) ? "ENTRA NELLA MINIERA ➔" : "ESPLORA IL BOSCO ➔";
+        String startLabel = "mine_iron".equals(game.selectedBiome) ? "ENTRA NELLA MINIERA ➔" :
+                ("forest_wood".equals(game.selectedBiome) ? "ESPLORA IL BOSCO ➔" : "DISCENDI NEI CRISTALLI ➔");
         canvas.drawText(startLabel, btnStartExpedition.centerX(), btnStartExpedition.centerY() + 6f, paintText);
 
         drawModalCloseButton(canvas);

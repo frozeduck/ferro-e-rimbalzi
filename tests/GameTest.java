@@ -16,8 +16,9 @@ public class GameTest {
         testHubESelezioneSpedizione();
         testSpedizioneNelBoscoDeiNani();
         testHubInterattivoEdificiEPotenziamenti();
+        testSpedizioneNellaCavernaDeiCristalliEPrismiMultiball();
 
-        System.out.println("TUTTI I 12 TEST PASSATI CON SUCCESSO! (12/12)");
+        System.out.println("TUTTI I 13 TEST PASSATI CON SUCCESSO! (13/13)");
     }
 
     private static void assertEquals(Object actual, Object expected, String message) {
@@ -336,5 +337,90 @@ public class GameTest {
         assertEquals(s.clanRunsWon, 1, "Raid vinti incrementati");
         assertTrue(s.clanIron >= 14, "Ferro consegnato accreditato al clan");
         System.out.println("✔ L'Hub interattivo gestisce correttamente potenziamenti della Fucina, buff della Taverna e statistiche");
+    }
+
+    public static void testSpedizioneNellaCavernaDeiCristalliEPrismiMultiball() {
+        Game s = new Game();
+        s.clanIron = 25;
+        s.clanWood = 20;
+
+        // 1. Sblocco Caverna dei Cristalli
+        assertTrue(s.unlockCrystal(), "Sblocco Caverna dei Cristalli con 18 Fe e 14 Wood");
+        assertTrue(s.crystalUnlocked, "Caverna sbloccata");
+        assertEquals(s.clanIron, 7, "Ferro rimanente dopo sblocco (25 - 18 = 7)");
+        assertEquals(s.clanWood, 6, "Legno rimanente dopo sblocco (20 - 14 = 6)");
+
+        // 2. Avvio spedizione nel bioma cristallo
+        s.startExpedition("crystal_cave");
+        assertEquals(s.selectedBiome, "crystal_cave", "Bioma selezionato Caverna Cristalli");
+        assertEquals(s.mines.size(), 3, "3 giacimenti di cristallo presenti");
+        assertEquals(s.prisms.size(), 2, "2 prismi di risonanza presenti");
+
+        // 3. Estrazione e lavorazione cristallo
+        s.ball.ore = 0;
+        s.ball.metal = 0;
+        assertTrue(s.interact("mine"), "Raccolta cristallo grezzo dal giacimento");
+        assertEquals(s.ball.ore, 1, "Un cristallo grezzo raccolto");
+
+        assertTrue(s.interact("gemcutter"), "Taglio e sfaccettatura al banco del tagliapietre");
+        assertEquals(s.ball.ore, 0, "Cristallo grezzo consumato");
+        assertEquals(s.ball.metal, 1, "Gemma pura sfaccettata ottenuta");
+
+        assertTrue(s.interact("crystal_vault"), "Consegna gemma alla cassaforte");
+        assertEquals(s.ball.metal, 0, "Gemma consegnata con successo");
+        assertEquals(s.delivered, 1, "Totale consegnato incrementato");
+
+        // 4. Meccanica Multiball dei Prismi di Risonanza
+        Game.Prism prism = s.prisms.get(0);
+        s.phase = "wave";
+        s.ball.held = false;
+        s.ball.x = prism.x + 10f;
+        s.ball.y = prism.y + 10f;
+        s.ball.vx = 100f;
+        s.ball.vy = -100f;
+
+        s.step(0.016f);
+        assertTrue(s.extraBall != null, "Multiball attivato dal prisma di risonanza");
+        assertTrue(s.extraBall.isClone, "La seconda sfera e' marcata come clone");
+
+        // 5. Caduta del clone senza perdita di cuori
+        int hpPrima = s.hp;
+        s.extraBall.y = s.getDefenseY() + 25f;
+        s.step(0.016f);
+        assertTrue(s.extraBall == null, "La sfera clone caduta si dissipa");
+        assertEquals(s.hp, hpPrima, "Nessun cuore perso se cade solo la sfera clone");
+
+        // 6. Salvataggio della sfera principale da parte del clone
+        s.extraBall = new Game.Ball();
+        s.extraBall.x = 270f;
+        s.extraBall.y = 500f;
+        s.extraBall.vx = 50f;
+        s.extraBall.vy = -120f;
+        s.extraBall.isClone = true;
+
+        s.ball.y = s.getDefenseY() + 25f; // Sfera principale cade
+        s.step(0.016f);
+        assertTrue(s.extraBall == null, "Clone consumato per salvare la principale");
+        assertEquals(s.hp, hpPrima, "Cuori intatti perche il clone ha salvato la partita");
+
+        // 7. Nemici speciali dell'ondata (Golem e Spettri)
+        s.phase = "build";
+        s.startWave();
+        boolean hasGolem = false;
+        boolean hasSpectre = false;
+        for (Game.Enemy e : s.enemies) {
+            if ("golem".equals(e.type)) hasGolem = true;
+            if ("spectre".equals(e.type)) hasSpectre = true;
+        }
+        assertTrue(hasGolem, "Golem presente nell'ondata");
+        assertTrue(hasSpectre, "Spettro di cristallo presente nell'ondata");
+
+        // 8. Ritorno all'Avamposto e accredito gemme
+        s.phase = "won";
+        s.delivered = 8;
+        s.returnToHub();
+        assertEquals(s.clanGems, 8, "Gemme accreditate al clan all'Avamposto");
+        assertEquals(s.clanTotalGems, 8, "Statistica storica gemme aggiornata");
+        System.out.println("✔ La spedizione nella Caverna dei Cristalli e il Multiball funzionano a regola d'arte");
     }
 }

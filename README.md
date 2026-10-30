@@ -2,7 +2,7 @@
 
 Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, progettato da zero per essere giocato in **orientamento verticale (portrait)** su smartphone con una sola mano.
 
-**[Scarica la Release v0.9.8 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.8)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
+**[Scarica la Release v0.9.9 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.9)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
 
 ---
 
@@ -14,8 +14,8 @@ Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, proge
 La piazza centrale dell'Avamposto offre 4 edifici interattivi visitabili toccandoli:
 * **Grande Fucina dei Fabbri**: forgia miglioramenti permanenti validi per tutte le partite future (Tempra dello Scudo per cuori vitali, Stiva Runicata per la capienza della sfera, Incudine d'Acciaio per il danno base).
 * **Taverna della Botte Bollente**: bevi un boccale di Idromele della Roccia, Birra di Fungo Silvano o Distillato del Drago per ottenere una benedizione/buff temporaneo per la prossima spedizione.
-* **Camera del Tesoro & Annali Reali**: consulta il bilancio del regno (Ferro e Legname) e l'albo storico dei record (spedizioni vinte, minerali estratti, legname tagliato, mostri sconfitti).
-* **Portale delle Gallerie**: consulta la mappa tattica dei biomi, seleziona la destinazione (Miniera di Ferro o Bosco dei Nani) e avvia la spedizione sui binari.
+* **Camera del Tesoro & Annali Reali**: consulta il bilancio del regno (Ferro, Legname e Gemme) e l'albo storico dei record (spedizioni vinte, minerali estratti, legname tagliato, gemme pure sfaccettate, mostri sconfitti).
+* **Portale delle Gallerie**: consulta la mappa tattica dei biomi, seleziona la destinazione (Miniera di Ferro, Bosco dei Nani o Caverna dei Cristalli) e avvia la spedizione sui binari.
 * **Salvataggio Persistente**: tutte le scorte, i potenziamenti del clan, i buff e i territori sbloccati sono salvati automaticamente con `SharedPreferences`.
 
 ### 2. Bioma Miniera di Ferro (Miniera Superiore)
@@ -32,12 +32,23 @@ La piazza centrale dell'Avamposto offre 4 edifici interattivi visitabili toccand
 * **Barricate di Tronchi & Baliste Silvane**: difese veloci da erigere per 3 Legno.
 * **Ragni delle Radici & Bestie Silvane**: nemici agili con movimento serpeggiante sinusoidale.
 
+### 4. Bioma Caverna dei Cristalli (Fase 3)
+* Sbloccabile con 18 Ferro + 14 Legname dalle riserve del Clan.
+* **Giacimenti di Cristallo Puro**: estrai cristalli grezzi di quarzo e mithril.
+* **Banco del Tagliapietre Runico**: rifinisce e sfaccetta i cristalli in gemme scintillanti.
+* **Cassaforte delle Gemme**: forziere d'ossidiana rinforzato per custodire il tesoro runico.
+* **Prismi di Risonanza Cristallina (Gimmick Multiball)**: colpendo i prismi la sfera si sdoppia! La seconda sfera clone aiuta a minare ed eliminare i nemici; se il clone cade si dissolve senza perdere cuori, e se la principale cade il clone la salva!
+* **Barricate d'Ossidiana & Torrette Laser a Prisma**: difesa ad alta energia focalizzata da lenti prismatiche (320px di raggio, 2 danni).
+* **Golem di Quarzo & Spettri di Cristallo**: nemici corazzati lenti ed entita eteree fluttuanti a traiettoria armonica.
+
 ---
 
 ## Caratteristiche Tecniche
 
 * **100% Nativo Android**: Sviluppato in Java standard con `SurfaceView` e rendering hardware su `Canvas` a ~60 FPS. Nessun wrapper web, nessun browser, nessun framework pesante.
 * **Layout Verticale Nativo (Portrait 9:16)**: Ottimizzato per display mobile con coordinate virtuali 540x960 e letterboxing adattivo ad alta precisione.
+* **Safe Area & Display Cutout**: Compatibilita totale con fotocamere punch-hole e schermi ultra-allungati (Samsung Galaxy Z Flip 7, 22:9).
+* **Grafica Pixel Art Fantasy Autentica (16-bit)**: 0% SVG vettoriale generico, palette 32 colori scalata con Nearest Neighbor pixel-per-pixel.
 * **Audio Procedurale Sintetico**: Generazione sonora tramite `AudioTrack` con decadimento esponenziale sintetizzato al volo (zero file audio da scaricare).
 * **100% Offline e Sicuro**: Nessun permesso di rete (`android.permission.INTERNET`) richiesto nel Manifest.
 
@@ -46,12 +57,12 @@ La piazza centrale dell'Avamposto offre 4 edifici interattivi visitabili toccand
 ## Download e Installazione
 
 Il pacchetto APK firmato pronto all'uso:
-* **APK**: `downloads/ferro-e-rimbalzi-0.9.4-debug.apk`
-* **Checksum**: `downloads/ferro-e-rimbalzi-0.9.4-debug.apk.sha256`
+* **APK**: `downloads/ferro-e-rimbalzi-0.9.9-debug.apk`
+* **Checksum**: `downloads/ferro-e-rimbalzi-0.9.9-debug.apk.sha256`
 
 Per installarlo tramite computer o adb:
 ```bash
-adb install downloads/ferro-e-rimbalzi-0.9.4-debug.apk
+adb install downloads/ferro-e-rimbalzi-0.9.9-debug.apk
 ```
 
 ---

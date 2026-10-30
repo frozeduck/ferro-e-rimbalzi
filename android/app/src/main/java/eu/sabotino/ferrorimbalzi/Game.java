@@ -22,6 +22,7 @@ public class Game {
         public float x = 270f, y = 768f, vx = 0f, vy = 0f, r = 8f;
         public int ore = 0, metal = 0;
         public boolean held = true;
+        public boolean isClone = false;
         public List<PointF> trail = new ArrayList<>();
     }
 
@@ -52,6 +53,14 @@ public class Game {
         public float x, y, w, h;
         public float bounceTime = 0f;
         public Mushroom(float x, float y, float w, float h) {
+            this.x = x; this.y = y; this.w = w; this.h = h;
+        }
+    }
+
+    public static class Prism {
+        public float x, y, w, h;
+        public float pulseTime = 0f;
+        public Prism(float x, float y, float w, float h) {
             this.x = x; this.y = y; this.w = w; this.h = h;
         }
     }
@@ -91,10 +100,12 @@ public class Game {
 
     // Hub dell'Avamposto e Selezione Spedizioni (Progressione Basi)
     public String screen = "hub"; // "hub" (Avamposto) oppure "game" (Spedizione)
-    public String selectedBiome = "mine_iron"; // "mine_iron", "forest_wood"
+    public String selectedBiome = "mine_iron"; // "mine_iron", "forest_wood", "crystal_cave"
     public int clanIron = 0; // Riserve complessive del Clan all'Avamposto
     public int clanWood = 0; // Riserve di legname
+    public int clanGems = 0; // Riserve di gemme runiche
     public boolean forestUnlocked = false;
+    public boolean crystalUnlocked = false;
 
     // Potenziamenti Permanenti del Clan (Fucina dell'Avamposto)
     public int clanUpgradeHp = 0; // Liv. 0..3: +1 Cuore iniziale
@@ -102,12 +113,13 @@ public class Game {
     public int clanUpgradeDamage = 0; // Liv. 0..2: +1 Danno base iniziale
 
     // Benedizione della Taverna Nanica (Attiva per 1 spedizione)
-    public String clanBuff = ""; // "", "heart", "speed", "iron_start"
+    public String clanBuff = ""; // "", "heart", "speed", "iron_start", "gem_glow"
 
     // Statistiche storiche del Clan
     public int clanRunsWon = 0;
     public int clanTotalMined = 0;
     public int clanTotalWood = 0;
+    public int clanTotalGems = 0;
     public int clanTotalKills = 0;
 
     public String phase = "build"; // build, wave, upgrade, won, short, lost
@@ -134,10 +146,13 @@ public class Game {
     public int nextId = 1;
 
     public Ball ball = new Ball();
+    public Ball extraBall = null; // Seconda sfera (Multiball dei Prismi di Cristallo)
+    public float multiballTimer = 0f;
     public Paddle paddle = new Paddle();
     public List<Building> buildings = new ArrayList<>();
     public List<Mine> mines = new ArrayList<>();
     public List<Mushroom> mushrooms = new ArrayList<>();
+    public List<Prism> prisms = new ArrayList<>();
     public List<Enemy> enemies = new ArrayList<>();
     public List<Effect> effects = new ArrayList<>();
     public List<String> events = new ArrayList<>();
@@ -153,8 +168,23 @@ public class Game {
         buildings.clear();
         mines.clear();
         mushrooms.clear();
+        prisms.clear();
 
-        if ("forest_wood".equals(selectedBiome)) {
+        if ("crystal_cave".equals(selectedBiome)) {
+            // Banco del Tagliapietre Runico e Cassaforte delle Gemme
+            buildings.add(new Building("gemcutter", "gemcutter", 35f, 400f, 120f, 80f));
+            buildings.add(new Building("crystal_vault", "crystal_vault", 385f, 400f, 120f, 80f));
+            buildings.add(new Building("wall0", "crystal_wall", 395f, 260f, 110f, 24f));
+
+            // 3 Giacimenti di Cristallo Puro (Mithril e Gemme Runiche)
+            mines.add(new Mine(35f, topInset + 95f, 130f, 50f));
+            mines.add(new Mine(205f, topInset + 80f, 130f, 50f));
+            mines.add(new Mine(375f, topInset + 95f, 130f, 50f));
+
+            // 2 Prismi di Risonanza Cristallina (Gimmick Multiball / Sdoppiamento Sfera)
+            prisms.add(new Prism(115f, 260f, 46f, 46f));
+            prisms.add(new Prism(385f, 260f, 46f, 46f));
+        } else if ("forest_wood".equals(selectedBiome)) {
             // Segheria runica e Magazzino del legname con aspect ratio proporzionato
             buildings.add(new Building("sawmill", "sawmill", 35f, 400f, 120f, 80f));
             buildings.add(new Building("depot", "depot", 385f, 400f, 120f, 80f));
@@ -206,9 +236,13 @@ public class Game {
             this.paddleWidth += 25f;
         } else if ("iron_start".equals(clanBuff)) {
             this.iron += 3;
+        } else if ("gem_glow".equals(clanBuff)) {
+            this.iron += 2;
         }
         this.clanBuff = ""; // Consumata per questa spedizione
 
+        this.extraBall = null;
+        this.multiballTimer = 0f;
         this.ball.held = true;
         this.ball.x = paddle.x;
         this.ball.y = paddle.y - 20f;
@@ -229,12 +263,16 @@ public class Game {
         clanTotalMined += stats.mined;
         clanTotalKills += kills;
 
-        if ("forest_wood".equals(selectedBiome)) {
+        if ("crystal_cave".equals(selectedBiome)) {
+            this.clanGems += this.delivered;
+            this.clanTotalGems += this.delivered;
+        } else if ("forest_wood".equals(selectedBiome)) {
             this.clanWood += this.delivered;
             this.clanTotalWood += this.delivered;
         } else {
             this.clanIron += this.delivered;
         }
+        this.extraBall = null;
         this.screen = "hub";
         this.phase = "build";
         this.ball.held = true;
@@ -291,6 +329,12 @@ public class Game {
             clanBuff = "iron_start";
             return true;
         }
+        if ("gem_glow".equals(type)) {
+            if (clanGems < 2) return false;
+            clanGems -= 2;
+            clanBuff = "gem_glow";
+            return true;
+        }
         return false;
     }
 
@@ -298,6 +342,16 @@ public class Game {
         if (clanIron >= 14 && !forestUnlocked) {
             clanIron -= 14;
             forestUnlocked = true;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean unlockCrystal() {
+        if (clanIron >= 18 && clanWood >= 14 && !crystalUnlocked) {
+            clanIron -= 18;
+            clanWood -= 14;
+            crystalUnlocked = true;
             return true;
         }
         return false;
@@ -347,16 +401,21 @@ public class Game {
     }
 
     public void normalize() {
-        float m = (float) Math.hypot(ball.vx, ball.vy);
+        normalizeBall(this.ball);
+    }
+
+    public void normalizeBall(Ball targetBall) {
+        if (targetBall == null) return;
+        float m = (float) Math.hypot(targetBall.vx, targetBall.vy);
         if (m == 0f) m = 1f;
         float v = speed();
-        ball.vx = ball.vx / m * v;
-        ball.vy = ball.vy / m * v;
-        if (Math.abs(ball.vy) < 80f) {
-            ball.vy = (ball.vy < 0f ? -1f : 1f) * 110f;
-            float n = (float) Math.hypot(ball.vx, ball.vy);
-            ball.vx *= v / n;
-            ball.vy *= v / n;
+        targetBall.vx = targetBall.vx / m * v;
+        targetBall.vy = targetBall.vy / m * v;
+        if (Math.abs(targetBall.vy) < 80f) {
+            targetBall.vy = (targetBall.vy < 0f ? -1f : 1f) * 110f;
+            float n = (float) Math.hypot(targetBall.vx, targetBall.vy);
+            targetBall.vx *= v / n;
+            targetBall.vy *= v / n;
         }
     }
 
@@ -392,11 +451,18 @@ public class Game {
         ball.held = true;
         enemies.clear();
         boolean isForest = "forest_wood".equals(selectedBiome);
+        boolean isCrystal = "crystal_cave".equals(selectedBiome);
         int count = 3 + wave * 2;
         for (int i = 0; i < count; i++) {
             Enemy e = new Enemy();
             e.id = "enemy" + i;
-            if (isForest) {
+            if (isCrystal) {
+                e.type = (i % 3 == 0) ? "golem" : "spectre";
+                e.w = (i % 3 == 0) ? 48f : 34f;
+                e.h = (i % 3 == 0) ? 44f : 30f;
+                e.hp = (i % 3 == 0) ? (5 + wave) : (2 + wave / 2);
+                e.maxHp = e.hp;
+            } else if (isForest) {
                 e.type = (i % 3 == 0) ? "treant" : "spider";
                 e.w = (i % 3 == 0) ? 46f : 36f;
                 e.h = (i % 3 == 0) ? 42f : 32f;
@@ -420,6 +486,7 @@ public class Game {
     private void settle() {
         ball.held = true;
         ball.trail.clear();
+        extraBall = null;
         shots.clear();
         if (wave == maxWaves) {
             phase = delivered >= target ? "won" : "short";
@@ -468,9 +535,10 @@ public class Game {
 
     public boolean build(String type, float x, float y) {
         if (!"build".equals(phase)) return false;
-        boolean isWall = "wall".equals(type) || "wood_wall".equals(type);
+        boolean isWall = "wall".equals(type) || "wood_wall".equals(type) || "crystal_wall".equals(type);
         boolean isForest = "forest_wood".equals(selectedBiome);
-        int cost = isWall ? COST_WALL : "turret".equals(type) ? (isForest ? 6 : COST_TURRET) : -1;
+        boolean isCrystal = "crystal_cave".equals(selectedBiome);
+        int cost = isWall ? COST_WALL : ("turret".equals(type) || "laser_turret".equals(type)) ? (isCrystal ? 7 : (isForest ? 6 : COST_TURRET)) : -1;
         if (cost < 0 || iron < cost || buildings.size() >= 12) return false;
 
         float rw = isWall ? 120f : 50f;
@@ -510,10 +578,13 @@ public class Game {
 
     public boolean interact(String type) {
         boolean isForest = "forest_wood".equals(selectedBiome);
+        boolean isCrystal = "crystal_cave".equals(selectedBiome);
         if ("mine".equals(type) && cargo() < capacity) {
             ball.ore++;
             stats.mined++;
-            if (isForest) {
+            if (isCrystal) {
+                event("+1 Cristallo grezzo", ball.x, ball.y - 18f, 0xFF67E8F9);
+            } else if (isForest) {
                 event("+1 Tronco", ball.x, ball.y - 18f, 0xFF86EFAC);
             } else {
                 event("+1 minerale", ball.x, ball.y - 18f, 0xFFD8A677);
@@ -521,24 +592,28 @@ public class Game {
             normalize();
             return true;
         }
-        if (("forge".equals(type) || "sawmill".equals(type)) && forgeOpen && ball.ore > 0) {
+        if (("forge".equals(type) || "sawmill".equals(type) || "gemcutter".equals(type)) && forgeOpen && ball.ore > 0) {
             int n = ball.ore;
             ball.metal += n;
             ball.ore = 0;
             stats.smelted += n;
-            if (isForest) {
+            if (isCrystal) {
+                event(n + " grezzi → gemme pure!", ball.x, ball.y - 18f, 0xFF67E8F9);
+            } else if (isForest) {
                 event(n + " tronchi → assi!", ball.x, ball.y - 18f, 0xFFFCD34D);
             } else {
                 event(n + " minerale → ferro!", ball.x, ball.y - 18f, 0xFFF8C467);
             }
             return true;
         }
-        if ("depot".equals(type) && ball.metal > 0) {
+        if (("depot".equals(type) || "crystal_vault".equals(type)) && ball.metal > 0) {
             int n = ball.metal;
             iron += n;
             delivered += n;
             ball.metal = 0;
-            if (isForest) {
+            if (isCrystal) {
+                event("Consegnate +" + n + " Gemme", ball.x, ball.y - 22f, 0xFF67E8F9);
+            } else if (isForest) {
                 event("Consegnati +" + n + " Legno", ball.x, ball.y - 22f, 0xFF6EE7B7);
             } else {
                 event("Consegnati +" + n + " Fe", ball.x, ball.y - 22f, 0xFF92D4BD);
@@ -618,6 +693,100 @@ public class Game {
         return collide(ball, e.x, e.y, e.w, e.h, false);
     }
 
+    private boolean stepSingleBall(Ball b, float dt) {
+        if (b == null || b.held) return false;
+        b.trail.add(0, new PointF(b.x, b.y));
+        if (b.trail.size() > 20) b.trail.remove(b.trail.size() - 1);
+
+        int n = Math.max(1, (int) Math.ceil(speed() * dt / (b.r * 0.65f)));
+        float h = dt / n;
+
+        for (int k = 0; k < n; k++) {
+            b.x += b.vx * h;
+            b.y += b.vy * h;
+
+            // Pareti laterali e superiore
+            if (b.x < b.r + 14f) { b.x = b.r + 14f; b.vx = Math.abs(b.vx); }
+            if (b.x > W - 14f - b.r) { b.x = W - 14f - b.r; b.vx = -Math.abs(b.vx); }
+            if (b.y < b.r + topInset + 80f) { b.y = b.r + topInset + 80f; b.vy = Math.abs(b.vy); }
+
+            // Rimbalzo sulla racchetta
+            if (b.vy > 0f && b.y + b.r >= paddle.y && b.y - b.r < paddle.y + 16f
+                    && Math.abs(b.x - paddle.x) < paddleWidth / 2f + b.r) {
+                float off = clamp((b.x - paddle.x) / (paddleWidth / 2f), -1f, 1f);
+                float a = (float) (-Math.PI / 2.0) + off * 1.15f;
+                b.vx = (float) Math.cos(a) * speed();
+                b.vy = (float) Math.sin(a) * speed();
+                b.y = paddle.y - b.r - 0.2f;
+            }
+
+            // Funghi elastici bouncers
+            for (Mushroom m : mushrooms) {
+                if (collide(b, m.x, m.y, m.w, m.h, true) && elapsed - hits.getOrDefault("mush" + m.hashCode(), -10f) > 0.18f) {
+                    hits.put("mush" + m.hashCode(), elapsed);
+                    m.bounceTime = 0.35f;
+                    b.vx *= 1.10f;
+                    b.vy *= 1.10f;
+                    normalizeBall(b);
+                    event("+RIMBALZO+", m.x + m.w / 2f, m.y - 10f, 0xFFF472B6);
+                }
+            }
+
+            // Prismi di risonanza cristallina (Multiball)
+            for (Prism p : prisms) {
+                if (collide(b, p.x, p.y, p.w, p.h, true) && elapsed - hits.getOrDefault("prism" + p.hashCode(), -10f) > 0.35f) {
+                    hits.put("prism" + p.hashCode(), elapsed);
+                    p.pulseTime = 0.5f;
+                    event("Risonanza Cristallina!", p.x + p.w / 2f, p.y - 10f, 0xFF67E8F9);
+                    if (extraBall == null) {
+                        extraBall = new Ball();
+                        extraBall.x = p.x + p.w / 2f;
+                        extraBall.y = p.y + p.h + 12f;
+                        extraBall.vx = -b.vx;
+                        extraBall.vy = Math.abs(b.vy) > 80f ? Math.abs(b.vy) : 260f;
+                        extraBall.held = false;
+                        extraBall.isClone = true;
+                        event("MULTIBALL! Sdoppiamento Sfera!", p.x + p.w / 2f, p.y + 20f, 0xFF67E8F9);
+                    }
+                }
+            }
+
+            // Miniere
+            for (int i = 0; i < mines.size(); i++) {
+                Mine m = mines.get(i);
+                if (collide(b, m) && elapsed - hits.getOrDefault("mine" + i, -10f) > 0.32f) {
+                    hits.put("mine" + i, elapsed);
+                    interact("mine");
+                }
+            }
+
+            // Edifici
+            for (Building facility : buildings) {
+                boolean solid = facility.type.equals("wall") || facility.type.equals("wood_wall") || facility.type.equals("crystal_wall")
+                        || facility.type.equals("turret") || facility.type.equals("laser_turret")
+                        || ((facility.type.equals("forge") || facility.type.equals("sawmill") || facility.type.equals("gemcutter")) && !forgeOpen);
+                if (collide(b, facility, solid) && elapsed - hits.getOrDefault(facility.id, -10f) > 0.28f) {
+                    hits.put(facility.id, elapsed);
+                    interact(facility.type);
+                }
+            }
+
+            // Nemici
+            for (Enemy e : enemies) {
+                if (e.hp > 0 && collide(b, e) && elapsed - hits.getOrDefault(e.id, -10f) > 0.20f) {
+                    hits.put(e.id, elapsed);
+                    hitEnemy(e);
+                }
+            }
+
+            // Caduta oltre la linea difensiva
+            if (b.y > getDefenseY() + 15f) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void step(float dt) {
         dt = clamp(dt, 0f, 0.05f);
         elapsed += dt;
@@ -643,10 +812,20 @@ public class Game {
             m.bounceTime = Math.max(0f, m.bounceTime - dt);
         }
 
+        for (Prism p : prisms) {
+            p.pulseTime = Math.max(0f, p.pulseTime - dt);
+        }
+
         for (Enemy e : enemies) {
             if (e.hp <= 0) continue;
             float speedY;
-            if ("spider".equals(e.type)) {
+            if ("spectre".equals(e.type)) {
+                speedY = 19f + wave * 1.5f;
+                e.x += (float) Math.cos(elapsed * 4.5f + e.id.hashCode() % 10) * 45f * dt;
+                e.x = clamp(e.x, 20f, W - 20f - e.w);
+            } else if ("golem".equals(e.type)) {
+                speedY = 9f + wave * 0.7f;
+            } else if ("spider".equals(e.type)) {
                 speedY = 18f + wave * 1.5f;
                 e.x += (float) Math.sin(elapsed * 5f + e.id.hashCode() % 10) * 45f * dt;
                 e.x = clamp(e.x, 20f, W - 20f - e.w);
@@ -666,23 +845,27 @@ public class Game {
         }
 
         for (Building turret : buildings) {
-            if (!turret.type.equals("turret")) continue;
+            boolean isLaser = turret.type.equals("laser_turret");
+            boolean isNormal = turret.type.equals("turret");
+            if (!isLaser && !isNormal) continue;
             turret.cooldown = Math.max(0f, turret.cooldown - dt);
             Enemy targetEnemy = null;
+            float maxRange = isLaser ? 320.0f : 260.0f;
             for (Enemy e : enemies) {
-                if (e.hp > 0 && Math.hypot(e.x - turret.x, e.y - turret.y) < 260.0) {
+                if (e.hp > 0 && Math.hypot(e.x - turret.x, e.y - turret.y) < maxRange) {
                     targetEnemy = e;
                     break;
                 }
             }
             if (targetEnemy != null && turret.cooldown == 0f) {
-                targetEnemy.hp -= 1;
+                int dmg = isLaser ? 2 : 1;
+                targetEnemy.hp -= dmg;
                 if (targetEnemy.hp <= 0) {
                     kills++;
                     xp++;
                 }
-                shots.add(new Shot(turret.x + 25f, turret.y + 25f, targetEnemy.x + 21f, targetEnemy.y + 16f, 0.2f));
-                turret.cooldown = 1.6f;
+                shots.add(new Shot(turret.x + 25f, turret.y + 25f, targetEnemy.x + 21f, targetEnemy.y + 16f, isLaser ? 0.3f : 0.2f));
+                turret.cooldown = isLaser ? 1.3f : 1.6f;
             }
         }
 
@@ -692,74 +875,23 @@ public class Game {
             if (s.life <= 0f) shots.remove(i);
         }
 
+        if (extraBall != null) {
+            boolean extraDied = stepSingleBall(extraBall, dt);
+            if (extraDied) {
+                extraBall = null;
+                event("Frammento dissipato", paddle.x, getDefenseY() - 15f, 0xFF67E8F9);
+            }
+        }
+
         if (!ball.held) {
-            ball.trail.add(0, new PointF(ball.x, ball.y));
-            if (ball.trail.size() > 20) ball.trail.remove(ball.trail.size() - 1);
-
-            int n = Math.max(1, (int) Math.ceil(speed() * dt / (ball.r * 0.65f)));
-            float h = dt / n;
-
-            for (int k = 0; k < n; k++) {
-                ball.x += ball.vx * h;
-                ball.y += ball.vy * h;
-
-                // Pareti laterali e superiore
-                if (ball.x < ball.r + 14f) { ball.x = ball.r + 14f; ball.vx = Math.abs(ball.vx); }
-                if (ball.x > W - 14f - ball.r) { ball.x = W - 14f - ball.r; ball.vx = -Math.abs(ball.vx); }
-                if (ball.y < ball.r + topInset + 80f) { ball.y = ball.r + topInset + 80f; ball.vy = Math.abs(ball.vy); }
-
-                // Rimbalzo sulla racchetta
-                if (ball.vy > 0f && ball.y + ball.r >= paddle.y && ball.y - ball.r < paddle.y + 16f
-                        && Math.abs(ball.x - paddle.x) < paddleWidth / 2f + ball.r) {
-                    float off = clamp((ball.x - paddle.x) / (paddleWidth / 2f), -1f, 1f);
-                    float a = (float) (-Math.PI / 2.0) + off * 1.15f;
-                    ball.vx = (float) Math.cos(a) * speed();
-                    ball.vy = (float) Math.sin(a) * speed();
-                    ball.y = paddle.y - ball.r - 0.2f;
-                }
-
-                // Funghi elastici bouncers
-                for (Mushroom m : mushrooms) {
-                    if (collide(ball, m.x, m.y, m.w, m.h, true) && elapsed - hits.getOrDefault("mush" + m.hashCode(), -10f) > 0.18f) {
-                        hits.put("mush" + m.hashCode(), elapsed);
-                        m.bounceTime = 0.35f;
-                        ball.vx *= 1.10f;
-                        ball.vy *= 1.10f;
-                        normalize();
-                        event("+RIMBALZO+", m.x + m.w / 2f, m.y - 10f, 0xFFF472B6);
-                    }
-                }
-
-                // Miniere
-                for (int i = 0; i < mines.size(); i++) {
-                    Mine m = mines.get(i);
-                    if (collide(ball, m) && elapsed - hits.getOrDefault("mine" + i, -10f) > 0.32f) {
-                        hits.put("mine" + i, elapsed);
-                        interact("mine");
-                    }
-                }
-
-                // Edifici
-                for (Building facility : buildings) {
-                    boolean solid = facility.type.equals("wall") || facility.type.equals("wood_wall")
-                            || facility.type.equals("turret")
-                            || ((facility.type.equals("forge") || facility.type.equals("sawmill")) && !forgeOpen);
-                    if (collide(ball, facility, solid) && elapsed - hits.getOrDefault(facility.id, -10f) > 0.28f) {
-                        hits.put(facility.id, elapsed);
-                        interact(facility.type);
-                    }
-                }
-
-                // Nemici
-                for (Enemy e : enemies) {
-                    if (e.hp > 0 && collide(ball, e) && elapsed - hits.getOrDefault(e.id, -10f) > 0.20f) {
-                        hits.put(e.id, elapsed);
-                        hitEnemy(e);
-                    }
-                }
-
-                // Caduta sotto la linea difensiva
-                if (ball.y > getDefenseY() + 15f) {
+            boolean ballDied = stepSingleBall(ball, dt);
+            if (ballDied) {
+                if (extraBall != null) {
+                    ball = extraBall;
+                    ball.isClone = false;
+                    extraBall = null;
+                    event("Sfera principale salvata dal clone!", paddle.x, getDefenseY() - 15f, 0xFF67E8F9);
+                } else {
                     hp--;
                     stats.lostCargo += cargo();
                     ball.ore = 0;
@@ -767,7 +899,6 @@ public class Game {
                     ball.held = true;
                     ball.trail.clear();
                     event("Sfera Caduta! −1 Cuore", paddle.x, getDefenseY() - 15f, 0xFFF97316);
-                    break;
                 }
             }
         }
