@@ -33,8 +33,8 @@ public class AudioHelper {
                 double angularFrequency = 2.0 * Math.PI * hz / SAMPLE_RATE;
 
                 for (int i = 0; i < numSamples; i++) {
-                    double decay = Math.exp(-4.0 * i / numSamples); // smooth exponential decay
-                    double sample = Math.sin(i * angularFrequency) * decay * 0.45;
+                    double decay = Math.exp(-3.5 * i / numSamples);
+                    double sample = Math.sin(i * angularFrequency) * decay * 0.42;
                     buffer[i] = (short) (sample * 32767);
                 }
 
@@ -55,7 +55,7 @@ public class AudioHelper {
                 track.write(buffer, 0, buffer.length);
                 track.play();
 
-                Thread.sleep((long) (durationSec * 1000) + 50);
+                Thread.sleep((long) (durationSec * 1000) + 40);
                 track.stop();
                 track.release();
             } catch (Exception ignored) {
@@ -64,7 +64,6 @@ public class AudioHelper {
     }
 
     public static void playTone(float hz) {
-        playTone(hz, 0.16f);
+        playTone(hz, 0.15f);
     }
 }
-
