@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { mkdirSync } from 'node:fs';
-import { chromium } from '/opt/docker/mecha-run/e2e/node_modules/playwright-core/index.mjs';
+const { chromium } = await import(process.env.PLAYWRIGHT_CORE || 'playwright-core');
 mkdirSync(new URL('../artifacts/',import.meta.url),{recursive:true});
-const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
+const browser=await chromium.launch({executablePath:process.env.CHROME || '/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
 const errors=[];
 try {
  for(const width of [1360,390]){

@@ -2,6 +2,8 @@
 
 Prototipo browser senza dipendenze: Breakout, trasporto delle risorse e costruzioni fisiche nella stessa arena. Interfaccia in italiano, mouse/tastiera/touch. Nessun account nel gioco e nessun salvataggio persistente.
 
+**[Gioca su GitHub Pages](https://frozeduck.github.io/ferro-e-rimbalzi/)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
+
 ## Prova
 
 `npm start` serve `dist/` su http://127.0.0.1:8143. I file statici funzionano con qualsiasi server HTTP.
@@ -13,6 +15,12 @@ Obiettivo: sopravvivere a 5 ondate e consegnare 14 ferro. Fra ondate si sceglie 
 ## Verifica
 
 `npm test` verifica catena economica, consumo del carico, collisioni, limiti delle costruzioni, richiamo, perdita del carico e transizioni/vittoria/sconfitta.
+
+La verifica opzionale nel browser richiede Playwright Core e Google Chrome disponibili nell'ambiente: `PLAYWRIGHT_CORE=/percorso/playwright-core/index.mjs CHROME=/percorso/chrome node tests/browser.mjs`. Il server locale deve essere avviato con `npm start`. Non serve per giocare né per pubblicare il sito.
+
+## Pubblicazione
+
+Ogni push su `main` esegue i test e pubblica soltanto `dist/` su GitHub Pages tramite il workflow `.github/workflows/pages.yml`. Non servono dipendenze, build o chiavi aggiuntive. Il workflow si può avviare anche manualmente dalla scheda Actions.
 
 ## Cosa osservare giocando
 
