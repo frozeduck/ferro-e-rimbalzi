@@ -56,6 +56,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private Bitmap bmpOrb;
     private Bitmap bmpGoblin;
     private Bitmap bmpBg;
+    private final Paint paintPixel = new Paint();
 
     // Atmosfera sotterranea: Faville della forgia e pulviscolo di miniera
     private static class Sparkle {
@@ -126,6 +127,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void init(Context context) {
+        paintPixel.setFilterBitmap(false);
+        paintPixel.setAntiAlias(false);
+        paintPixel.setDither(false);
+
         game = new Game();
         lastHp = game.hp;
         loadBitmaps(context);
@@ -609,7 +614,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         float bgH = getHeight() > 0 ? (float) getHeight() : virtualH;
         if (bmpBg != null) {
             tempRect.set(0f, 0f, bgW, bgH);
-            canvas.drawBitmap(bmpBg, null, tempRect, null);
+            canvas.drawBitmap(bmpBg, null, tempRect, paintPixel);
         } else {
             paintFill.setStyle(Paint.Style.FILL);
             if (bgH > 10f) {
@@ -792,7 +797,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private void drawOreVein(Canvas canvas, Game.Mine m, int index) {
         tempRect.set(m.x, m.y, m.x + m.w, m.y + m.h);
         if (bmpMine != null) {
-            canvas.drawBitmap(bmpMine, null, tempRect, null);
+            canvas.drawBitmap(bmpMine, null, tempRect, paintPixel);
         } else {
             paintFill.setStyle(Paint.Style.FILL);
             paintFill.setColor(0xFF2D241E);
@@ -813,7 +818,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
         if ("wall".equals(b.type)) {
             if (bmpWall != null) {
-                canvas.drawBitmap(bmpWall, null, tempRect, null);
+                canvas.drawBitmap(bmpWall, null, tempRect, paintPixel);
             } else {
                 paintFill.setStyle(Paint.Style.FILL);
                 paintFill.setColor(0xFF383532);
@@ -822,7 +827,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         } else if ("forge".equals(b.type)) {
             Bitmap fb = game.forgeOpen ? bmpForgeOpen : bmpForgeClosed;
             if (fb != null) {
-                canvas.drawBitmap(fb, null, tempRect, null);
+                canvas.drawBitmap(fb, null, tempRect, paintPixel);
             } else {
                 paintFill.setStyle(Paint.Style.FILL);
                 paintFill.setColor(0xFF1C1917);
@@ -830,7 +835,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             }
         } else if ("vault".equals(b.type) || "depot".equals(b.type)) {
             if (bmpVault != null) {
-                canvas.drawBitmap(bmpVault, null, tempRect, null);
+                canvas.drawBitmap(bmpVault, null, tempRect, paintPixel);
             } else {
                 paintFill.setStyle(Paint.Style.FILL);
                 paintFill.setColor(0xFF3B1A0A);
@@ -838,7 +843,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             }
         } else if ("turret".equals(b.type)) {
             if (bmpTurret != null) {
-                canvas.drawBitmap(bmpTurret, null, tempRect, null);
+                canvas.drawBitmap(bmpTurret, null, tempRect, paintPixel);
             } else {
                 paintFill.setStyle(Paint.Style.FILL);
                 paintFill.setColor(0xFF292524);
@@ -858,7 +863,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private void drawMonster(Canvas canvas, Game.Enemy e) {
         tempRect.set(e.x, e.y, e.x + e.w, e.y + e.h);
         if (bmpGoblin != null) {
-            canvas.drawBitmap(bmpGoblin, null, tempRect, null);
+            canvas.drawBitmap(bmpGoblin, null, tempRect, paintPixel);
         } else {
             paintFill.setStyle(Paint.Style.FILL);
             paintFill.setColor(0xFF16A34A);
@@ -887,7 +892,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
         tempRect.set(px - pw / 2f, py - 4f, px + pw / 2f, py + ph + 4f);
         if (bmpShield != null) {
-            canvas.drawBitmap(bmpShield, null, tempRect, null);
+            canvas.drawBitmap(bmpShield, null, tempRect, paintPixel);
         } else {
             paintFill.setStyle(Paint.Style.FILL);
             paintFill.setColor(0xFF78350F);
@@ -949,7 +954,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
         tempRect.set(-game.ball.r * 1.25f, -game.ball.r * 1.25f, game.ball.r * 1.25f, game.ball.r * 1.25f);
         if (bmpOrb != null) {
-            canvas.drawBitmap(bmpOrb, null, tempRect, null);
+            canvas.drawBitmap(bmpOrb, null, tempRect, paintPixel);
         } else {
             paintFill.setStyle(Paint.Style.FILL);
             paintFill.setColor(game.burn ? 0xFFFFD700 : 0xFFE7E5E4);
@@ -1277,7 +1282,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
         if (cardBmp != null) {
             tempRect.set(iconCx - 36f, iconCy - 36f, iconCx + 36f, iconCy + 36f);
-            canvas.drawBitmap(cardBmp, null, tempRect, null);
+            canvas.drawBitmap(cardBmp, null, tempRect, paintPixel);
         }
 
         // Testi a destra

@@ -1,455 +1,680 @@
 #!/usr/bin/env python3
 """
-Generatore di Sprite Vettoriali e Texture Fantasy per Ferro e Rimbalzi.
-Produce asset grafici ad alta risoluzione (512x512 supersampling con filtro Lanczos),
-completi di finiture metalliche, ombreggiature e bordature per risaltare su mobile.
+Generatore di Sprite RETRO PIXEL ART 16-Bit / 32-Bit per Ferro e Rimbalzi.
+Disegna su matrici a bassa risoluzione (griglia pixel nativa) e scala con NEAREST NEIGHBOR.
+ZERO grafica vettoriale: solo pixel puri, palette controllata a 32 colori, contorni a blocchi e dithering.
 """
-import math
 import pathlib
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 OUT_DIR = pathlib.Path(__file__).resolve().parent.parent / 'android/app/src/main/res/drawable'
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Palette Nanica Fantasy
-COL_BG_DARK = (20, 12, 9, 255)
-COL_STONE_DARK = (41, 37, 36, 255)
-COL_STONE_MID = (68, 64, 60, 255)
-COL_STONE_LIGHT = (120, 113, 108, 255)
-COL_GOLD_BRIGHT = (251, 191, 36, 255)
-COL_GOLD_DEEP = (217, 119, 6, 255)
-COL_BRONZE = (180, 83, 9, 255)
-COL_IRON_LIGHT = (226, 232, 240, 255)
-COL_IRON_MID = (148, 163, 184, 255)
-COL_IRON_DARK = (30, 41, 59, 255)
-COL_FIRE_YELLOW = (254, 240, 138, 255)
-COL_FIRE_ORANGE = (249, 115, 22, 255)
-COL_FIRE_RED = (220, 38, 38, 255)
-COL_WOOD_DARK = (69, 26, 3, 255)
-COL_WOOD_MID = (120, 53, 15, 255)
-COL_WOOD_LIGHT = (180, 83, 9, 255)
-COL_GEM_CYAN = (34, 211, 238, 255)
-COL_GEM_RUBY = (244, 63, 94, 255)
-COL_GOBLIN_SKIN = (74, 222, 128, 255)
-COL_GOBLIN_DARK = (22, 101, 52, 255)
-COL_INK = (15, 10, 8, 255)
-COL_WHITE = (255, 255, 255, 255)
+# Palette Fantasy 32-Colori (Stile 16-bit Dawnbringer / Endesga)
+PAL = {
+    'void': (0, 0, 0, 0),
+    'black': (18, 14, 16, 255),
+    'stone_shadow': (32, 26, 42, 255),
+    'stone_dark': (52, 45, 68, 255),
+    'stone_mid': (82, 75, 102, 255),
+    'stone_light': (132, 124, 153, 255),
+    'stone_high': (186, 178, 204, 255),
+    'iron_shadow': (24, 30, 44, 255),
+    'iron_dark': (48, 58, 82, 255),
+    'iron_mid': (88, 106, 142, 255),
+    'iron_light': (148, 170, 210, 255),
+    'iron_white': (224, 236, 255, 255),
+    'gold_shadow': (115, 60, 10, 255),
+    'gold_dark': (168, 92, 16, 255),
+    'gold_mid': (228, 150, 30, 255),
+    'gold_light': (252, 210, 60, 255),
+    'gold_high': (255, 246, 150, 255),
+    'wood_shadow': (36, 18, 14, 255),
+    'wood_dark': (68, 36, 26, 255),
+    'wood_mid': (112, 60, 42, 255),
+    'wood_light': (164, 94, 66, 255),
+    'fire_shadow': (120, 20, 30, 255),
+    'fire_dark': (180, 35, 30, 255),
+    'fire_mid': (235, 75, 30, 255),
+    'fire_orange': (250, 130, 35, 255),
+    'fire_yellow': (255, 215, 65, 255),
+    'fire_white': (255, 252, 210, 255),
+    'gem_cyan_dark': (20, 70, 110, 255),
+    'gem_cyan_mid': (30, 135, 175, 255),
+    'gem_cyan_light': (65, 205, 220, 255),
+    'gem_cyan_white': (185, 252, 255, 255),
+    'goblin_shadow': (18, 48, 25, 255),
+    'goblin_dark': (34, 76, 42, 255),
+    'goblin_mid': (64, 136, 58, 255),
+    'goblin_light': (115, 196, 82, 255),
+    'goblin_high': (182, 236, 120, 255),
+    'ruby_dark': (110, 16, 36, 255),
+    'ruby_mid': (180, 28, 54, 255),
+    'ruby_light': (238, 70, 88, 255),
+}
 
 
-def finalize_sprite(im_hi, target_size=(256, 256), outline_width=8, outline_color=(254, 243, 199, 220), drop_shadow=True):
-    """Aggiunge bordo anti-alias e ombreggiatura morbida, scalando con Lanczos."""
-    w, h = im_hi.size
-    alpha = im_hi.split()[-1]
-
-    # Ombra d'appoggio morbida
-    shadow_layer = Image.new('RGBA', (w, h), (0, 0, 0, 0))
-    if drop_shadow:
-        shadow_mask = alpha.filter(ImageFilter.GaussianBlur(radius=16))
-        shadow_img = Image.new('RGBA', (w, h), (0, 0, 0, 160))
-        shadow_layer.paste(shadow_img, (0, 12), shadow_mask)
-
-    # Bordo sagomato die-cut per massima leggibilità su sfondi scuri
-    border_layer = Image.new('RGBA', (w, h), (0, 0, 0, 0))
-    if outline_width > 0:
-        dilated = alpha.filter(ImageFilter.MaxFilter(outline_width * 2 + 1))
-        dilated = dilated.filter(ImageFilter.GaussianBlur(radius=outline_width * 0.35))
-        dilated = dilated.point(lambda p: 255 if p > 80 else int((p / 80.0) ** 1.5 * 255))
-        border_fill = Image.new('RGBA', (w, h), outline_color)
-        border_layer.paste(border_fill, (0, 0), dilated)
-
-    # Compositing: Ombra -> Bordo -> Immagine principale
-    out = Image.alpha_composite(shadow_layer, border_layer)
-    out = Image.alpha_composite(out, im_hi)
-    return out.resize(target_size, Image.Resampling.LANCZOS)
+def create_pixel_canvas(w, h):
+    return Image.new('RGBA', (w, h), PAL['void'])
 
 
-def gen_miniera():
-    """Giacimento montano di ferro con cristalli celesti e picconi dorati incrociati."""
-    im = Image.new('RGBA', (512, 512), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(im)
+def scale_nearest(im, scale_factor=4):
+    """Ingrandimento perfetto pixel-per-pixel (Nearest Neighbor), zero sfocature."""
+    w, h = im.size
+    return im.resize((w * scale_factor, h * scale_factor), Image.Resampling.NEAREST)
 
-    # 1. Roccia granitica massiccia
-    rock_pts = [
-        (80, 420), (100, 260), (160, 140), (260, 90),
-        (370, 130), (430, 240), (440, 420), (320, 440), (180, 440)
+
+def gen_pixel_miniera():
+    """Giacimento minerario 16-bit: roccia frastagliata, venature di ferro grezzo, cristalli azzurri e picconi incrociati."""
+    w, h = 48, 36
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # 1. Sagoma rocciosa di granito frastagliato
+    for y in range(4, 34):
+        # Profilo roccioso non lineare
+        left = 4 + int((34 - y) * 0.35) + (y % 3)
+        right = 44 - int((34 - y) * 0.30) - ((y + 1) % 3)
+        for x in range(left, right):
+            # Dithering e ombreggiatura da sinistra a destra
+            if x == left or x == right - 1 or y == 4 or y == 33:
+                pix[x, y] = PAL['black']
+            elif x < left + 8:
+                pix[x, y] = PAL['stone_shadow'] if (x + y) % 2 == 0 else PAL['stone_dark']
+            elif x < 26:
+                pix[x, y] = PAL['stone_dark'] if (x + y) % 3 == 0 else PAL['stone_mid']
+            elif x < 38:
+                pix[x, y] = PAL['stone_mid'] if (x + y) % 2 == 0 else PAL['stone_light']
+            else:
+                pix[x, y] = PAL['stone_light'] if (x + y) % 2 == 0 else PAL['stone_high']
+
+    # 2. Venature metalliche di ferro grezzo argentato
+    iron_coords = [
+        (12, 12), (13, 12), (14, 13), (15, 13), (16, 14), (17, 13),
+        (28, 10), (29, 10), (30, 11), (31, 11), (32, 12),
+        (10, 24), (11, 24), (12, 25), (13, 25), (14, 26)
     ]
-    draw.polygon(rock_pts, fill=COL_STONE_DARK, outline=COL_INK)
+    for x, y in iron_coords:
+        if 0 <= x < w and 0 <= y < h:
+            pix[x, y] = PAL['iron_white']
+            pix[x, y + 1] = PAL['iron_light']
+            pix[x + 1, y] = PAL['iron_mid']
 
-    # Faccette rocciose tridimensionali
-    draw.polygon([(160, 140), (260, 90), (270, 240), (170, 260)], fill=COL_STONE_LIGHT)
-    draw.polygon([(260, 90), (370, 130), (360, 260), (270, 240)], fill=COL_STONE_MID)
-    draw.polygon([(100, 260), (170, 260), (180, 430), (90, 410)], fill=(50, 44, 40, 255))
-    draw.polygon([(360, 260), (430, 240), (430, 410), (330, 430)], fill=(32, 28, 25, 255))
+    # 3. Cristalli azzurri luminosi (gemme esagonali 16-bit)
+    gems = [(20, 10), (34, 18), (14, 18)]
+    for gx, gy in gems:
+        pix[gx, gy - 2] = PAL['gem_cyan_white']
+        pix[gx - 1, gy - 1] = PAL['gem_cyan_light']
+        pix[gx, gy - 1] = PAL['gem_cyan_white']
+        pix[gx + 1, gy - 1] = PAL['gem_cyan_mid']
+        pix[gx - 1, gy] = PAL['gem_cyan_mid']
+        pix[gx, gy] = PAL['gem_cyan_dark']
+        pix[gx + 1, gy] = PAL['black']
+        pix[gx, gy + 1] = PAL['black']
 
-    # 2. Venature metalliche argentee di ferro grezzo
-    draw.line([(140, 220), (190, 250), (230, 230)], fill=COL_IRON_LIGHT, width=12)
-    draw.line([(290, 260), (340, 290), (380, 270)], fill=COL_IRON_LIGHT, width=12)
+    # 4. Picconi nanici pixel incrociati al centro
+    # Piccone 1 (da basso sx ad alto dx)
+    for i in range(16):
+        px = 16 + i
+        py = 28 - i
+        pix[px, py] = PAL['wood_mid']
+        pix[px + 1, py] = PAL['wood_light']
+    # Testa piccone 1
+    for k in range(-4, 5):
+        pix[31 - k, 12 - k] = PAL['iron_white'] if k > 0 else PAL['iron_mid']
+        pix[32 - k, 13 - k] = PAL['black']
 
-    # 3. Cristalli azzurri incastonati
-    for cx, cy, sz in [(240, 160, 36), (330, 200, 28), (170, 310, 30)]:
-        pts = [(cx, cy - sz), (cx + sz * 0.7, cy), (cx, cy + sz), (cx - sz * 0.7, cy)]
-        draw.polygon(pts, fill=COL_GEM_CYAN, outline=COL_WHITE)
-        draw.polygon([(cx, cy - sz), (cx + sz * 0.7, cy), (cx, cy)], fill=(165, 243, 252, 255))
+    # Piccone 2 (da basso dx ad alto sx)
+    for i in range(16):
+        px = 31 - i
+        py = 28 - i
+        pix[px, py] = PAL['wood_dark']
+        pix[px - 1, py] = PAL['wood_mid']
+    # Testa piccone 2
+    for k in range(-4, 5):
+        pix[16 + k, 12 - k] = PAL['iron_light'] if k > 0 else PAL['iron_dark']
+        pix[15 + k, 13 - k] = PAL['black']
 
-    # 4. Picconi nanici dorati incrociati
-    for angle, offs in [(math.radians(38), -1), (math.radians(-38), 1)]:
-        # Manico in legno
-        x1 = 256 - math.sin(angle) * 160
-        y1 = 280 + math.cos(angle) * 160
-        x2 = 256 + math.sin(angle) * 160
-        y2 = 280 - math.cos(angle) * 160
-        draw.line([(x1, y1), (x2, y2)], fill=COL_WOOD_MID, width=18)
-        draw.line([(x1, y1), (x2, y2)], fill=COL_GOLD_BRIGHT, width=6)
-        # Testa a doppia punta del piccone
-        hx1 = x2 - math.cos(angle) * 60
-        hy1 = y2 - math.sin(angle) * 60
-        hx2 = x2 + math.cos(angle) * 60
-        hy2 = y2 + math.sin(angle) * 60
-        draw.line([(hx1, hy1), (hx2, hy2)], fill=COL_IRON_LIGHT, width=22)
-        draw.ellipse([x2 - 16, y2 - 16, x2 + 16, y2 + 16], fill=COL_GOLD_DEEP, outline=COL_INK, width=4)
-
-    final = finalize_sprite(im, target_size=(256, 192), outline_width=10, outline_color=(254, 240, 138, 240))
-    final.save(OUT_DIR / 'sprite_miniera.png')
-    print('Generato sprite_miniera.png')
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_miniera.png')
+    print('Pixel art generata: sprite_miniera.png (192x144)')
 
 
-def gen_forgia_aperta():
-    """Fucina nanica fusa con crogiolo incandescente, fiamma viva e incudine scura."""
-    im = Image.new('RGBA', (512, 512), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(im)
+def gen_pixel_forgia_aperta():
+    """Fucina nanica 16-bit: mattoni refrattari, camini, bocca fusa con gradiente fuoco/lava e incudine nera."""
+    w, h = 48, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
 
-    # 1. Struttura in pietra e mattoni refrattari
-    draw.rounded_rectangle([60, 80, 452, 450], radius=32, fill=COL_STONE_DARK, outline=COL_INK, width=14)
+    # Struttura esterna della fornace in mattoni
+    for y in range(4, 30):
+        for x in range(4, 44):
+            if x == 4 or x == 43 or y == 4 or y == 29:
+                pix[x, y] = PAL['black']
+            else:
+                # Trama mattoni 16-bit
+                is_mortar_y = (y % 5 == 4)
+                row = y // 5
+                shift = 4 if row % 2 == 1 else 0
+                is_mortar_x = ((x + shift) % 8 == 0)
+                if is_mortar_y or is_mortar_x:
+                    pix[x, y] = PAL['stone_shadow']
+                else:
+                    pix[x, y] = PAL['stone_mid'] if (x + y) % 3 == 0 else PAL['stone_dark']
+
     # Camini superiori
-    draw.rounded_rectangle([100, 40, 170, 100], radius=12, fill=COL_STONE_MID, outline=COL_INK, width=8)
-    draw.rounded_rectangle([342, 40, 412, 100], radius=12, fill=COL_STONE_MID, outline=COL_INK, width=8)
+    for cx in [8, 34]:
+        for y in range(1, 5):
+            for x in range(cx, cx + 6):
+                if y == 1 or x == cx or x == cx + 5:
+                    pix[x, y] = PAL['black']
+                else:
+                    pix[x, y] = PAL['stone_mid']
 
-    # Cerchiature in ferro e borchie dorate
-    draw.line([(60, 130), (452, 130)], fill=COL_BRONZE, width=16)
-    draw.line([(60, 410), (452, 410)], fill=COL_BRONZE, width=16)
-    for bx in [100, 180, 256, 332, 412]:
-        draw.ellipse([bx - 10, 120, bx + 10, 140], fill=COL_GOLD_BRIGHT, outline=COL_INK, width=4)
-        draw.ellipse([bx - 10, 400, bx + 10, 420], fill=COL_GOLD_BRIGHT, outline=COL_INK, width=4)
+    # Bocca fusa della fornace (Arco di fuoco ardente)
+    for y in range(10, 27):
+        for x in range(12, 36):
+            # Forma ad arco
+            if y < 14 and (x < 15 or x > 32):
+                continue
+            if x == 12 or x == 35 or y == 26:
+                pix[x, y] = PAL['black']
+            elif y < 14:
+                pix[x, y] = PAL['fire_dark']
+            elif y < 18:
+                pix[x, y] = PAL['fire_mid'] if (x + y) % 2 == 0 else PAL['fire_orange']
+            elif y < 22:
+                pix[x, y] = PAL['fire_orange'] if (x + y) % 2 == 0 else PAL['fire_yellow']
+            else:
+                pix[x, y] = PAL['fire_yellow'] if (x + y) % 2 == 0 else PAL['fire_white']
 
-    # 2. Bocca della fornace incandescente (Lava & Fuoco del drago)
-    draw.rounded_rectangle([96, 160, 416, 380], radius=24, fill=COL_FIRE_RED)
-    draw.rounded_rectangle([112, 176, 400, 364], radius=20, fill=COL_FIRE_ORANGE)
-    draw.rounded_rectangle([130, 200, 382, 344], radius=16, fill=COL_FIRE_YELLOW)
+    # Incudine d'acciaio scuro al centro del focolare
+    anvil_pts = [
+        # Base
+        (20, 24), (21, 24), (22, 24), (23, 24), (24, 24), (25, 24), (26, 24), (27, 24),
+        # Fusto
+        (22, 22), (23, 22), (24, 22), (25, 22),
+        (22, 23), (23, 23), (24, 23), (25, 23),
+        # Piatto e corno
+        (18, 20), (19, 20), (20, 20), (21, 20), (22, 20), (23, 20), (24, 20), (25, 20), (26, 20), (27, 20), (28, 20), (29, 20),
+        (19, 21), (20, 21), (21, 21), (22, 21), (23, 21), (24, 21), (25, 21), (26, 21), (27, 21)
+    ]
+    for x, y in anvil_pts:
+        pix[x, y] = PAL['black']
+    # Luce superiore sull'incudine
+    for x in range(20, 28):
+        pix[x, 20] = PAL['iron_light']
 
-    # Bagliore del metallo liquido
-    draw.ellipse([160, 270, 352, 340], fill=COL_WHITE)
-
-    # 3. Grande Incudine nanica al centro
-    draw.rectangle([190, 300, 322, 360], fill=COL_IRON_DARK, outline=COL_INK, width=6)
-    draw.rectangle([210, 250, 302, 300], fill=(24, 20, 18, 255), outline=COL_INK, width=6)
-    draw.polygon([(180, 220), (332, 220), (312, 250), (200, 250)], fill=COL_IRON_MID, outline=COL_INK, width=6)
-    draw.polygon([(332, 220), (370, 235), (332, 250)], fill=COL_IRON_LIGHT, outline=COL_INK, width=4)
-
-    # Martello del fabbro appoggiato
-    draw.line([(170, 200), (250, 270)], fill=COL_WOOD_MID, width=10)
-    draw.rectangle([145, 185, 185, 215], fill=COL_IRON_LIGHT, outline=COL_INK, width=4)
-
-    final = finalize_sprite(im, target_size=(256, 192), outline_width=10, outline_color=(254, 215, 170, 240))
-    final.save(OUT_DIR / 'sprite_forgia_aperta.png')
-    print('Generato sprite_forgia_aperta.png')
-
-
-def gen_forgia_chiusa():
-    """Fucina con pesante portone blindato in ferro borchiato e rune difensive."""
-    im = Image.new('RGBA', (512, 512), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(im)
-
-    # Struttura in pietra
-    draw.rounded_rectangle([60, 80, 452, 450], radius=32, fill=COL_STONE_DARK, outline=COL_INK, width=14)
-    # Camini superiori
-    draw.rounded_rectangle([100, 40, 170, 100], radius=12, fill=COL_STONE_MID, outline=COL_INK, width=8)
-    draw.rounded_rectangle([342, 40, 412, 100], radius=12, fill=COL_STONE_MID, outline=COL_INK, width=8)
-
-    # Portone blindato in piastre d'acciaio scuro
-    draw.rounded_rectangle([96, 160, 416, 380], radius=24, fill=(35, 30, 28, 255), outline=COL_INK, width=10)
-
-    # Travi di rinforzo a croce
-    draw.line([(96, 160), (416, 380)], fill=COL_BRONZE, width=20)
-    draw.line([(96, 380), (416, 160)], fill=COL_BRONZE, width=20)
-
-    # Sigillo runico protettivo centrale (Scudo e martello)
-    draw.ellipse([206, 220, 306, 320], fill=COL_GOLD_DEEP, outline=COL_GOLD_BRIGHT, width=8)
-    draw.polygon([(256, 235), (290, 265), (275, 305), (237, 305), (222, 265)], fill=COL_STONE_DARK)
-
-    # Fessure da cui trapela luce fusa ardente
-    draw.line([(120, 365), (392, 365)], fill=COL_FIRE_ORANGE, width=6)
-    draw.line([(120, 175), (392, 175)], fill=COL_FIRE_ORANGE, width=6)
-
-    final = finalize_sprite(im, target_size=(256, 192), outline_width=10, outline_color=(254, 240, 138, 220))
-    final.save(OUT_DIR / 'sprite_forgia_chiusa.png')
-    print('Generato sprite_forgia_chiusa.png')
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_forgia_aperta.png')
+    print('Pixel art generata: sprite_forgia_aperta.png (192x128)')
 
 
-def gen_forziere():
-    """Scrigno reale nanico in legno di quercia rinforzato con ottone, lingotti e gemme."""
-    im = Image.new('RGBA', (512, 512), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(im)
+def gen_pixel_forgia_chiusa():
+    """Fucina chiusa: portone blindato in piastre d'acciaio rivettate e travi a croce in bronzo."""
+    w, h = 48, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
 
-    # 1. Corpo del forziere in rovere scuro
-    draw.rounded_rectangle([60, 160, 452, 440], radius=28, fill=COL_WOOD_DARK, outline=COL_INK, width=12)
-    # Doghe in legno
-    for x in [130, 210, 302, 382]:
-        draw.line([(x, 160), (x, 440)], fill=(45, 18, 5, 255), width=6)
+    # Struttura esterna della fornace in mattoni
+    for y in range(4, 30):
+        for x in range(4, 44):
+            if x == 4 or x == 43 or y == 4 or y == 29:
+                pix[x, y] = PAL['black']
+            else:
+                is_mortar_y = (y % 5 == 4)
+                row = y // 5
+                shift = 4 if row % 2 == 1 else 0
+                is_mortar_x = ((x + shift) % 8 == 0)
+                if is_mortar_y or is_mortar_x:
+                    pix[x, y] = PAL['stone_shadow']
+                else:
+                    pix[x, y] = PAL['stone_mid'] if (x + y) % 3 == 0 else PAL['stone_dark']
 
-    # 2. Coperchio aperto arcuato con interno dorato
-    draw.polygon([(60, 160), (452, 160), (480, 80), (32, 80)], fill=(75, 30, 8, 255), outline=COL_INK, width=10)
+    # Camini
+    for cx in [8, 34]:
+        for y in range(1, 5):
+            for x in range(cx, cx + 6):
+                if y == 1 or x == cx or x == cx + 5:
+                    pix[x, y] = PAL['black']
+                else:
+                    pix[x, y] = PAL['stone_mid']
 
-    # 3. Tesoro straripante: Lingotti d'oro e ferro forgiato
+    # Portone blindato chiuso (piastre di ferro)
+    for y in range(10, 27):
+        for x in range(12, 36):
+            if y < 14 and (x < 15 or x > 32):
+                continue
+            if x == 12 or x == 35 or y == 26 or y == 10:
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['iron_shadow'] if (x + y) % 2 == 0 else PAL['iron_dark']
+
+    # Travi di rinforzo diagonali a X in bronzo
+    for i in range(14):
+        # Diagonale 1
+        x1 = 15 + int(i * 1.3)
+        y1 = 12 + i
+        if 0 <= x1 < w and 0 <= y1 < h:
+            pix[x1, y1] = PAL['gold_mid']
+            pix[x1 + 1, y1] = PAL['gold_dark']
+        # Diagonale 2
+        x2 = 32 - int(i * 1.3)
+        if 0 <= x2 < w and 0 <= y1 < h:
+            pix[x2, y1] = PAL['gold_mid']
+            pix[x2 - 1, y1] = PAL['gold_dark']
+
+    # Borchie d'oro e sigillo centrale
+    pix[23, 18] = PAL['gold_high']
+    pix[24, 18] = PAL['gold_high']
+    pix[23, 19] = PAL['gold_light']
+    pix[24, 19] = PAL['gold_light']
+
+    # Bagliore del fuoco che fuoriesce dalla fessura inferiore
+    for x in range(14, 34):
+        pix[x, 25] = PAL['fire_orange'] if x % 2 == 0 else PAL['fire_yellow']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_forgia_chiusa.png')
+    print('Pixel art generata: sprite_forgia_chiusa.png (192x128)')
+
+
+def gen_pixel_forziere():
+    """Scrigno reale 16-bit: doghe di legno di quercia, bordi in ottone dorato, serratura e lingotti/gemme."""
+    w, h = 48, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Corpo del forziere in legno scuro
+    for y in range(12, 29):
+        for x in range(6, 42):
+            if x == 6 or x == 41 or y == 28:
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['wood_dark'] if x % 7 == 0 else (PAL['wood_mid'] if (x + y) % 2 == 0 else PAL['wood_light'])
+
+    # Coperchio aperto arcuato in prospettiva
+    for y in range(6, 13):
+        indent = (12 - y) * 2
+        for x in range(6 + indent, 42 - indent):
+            if y == 6 or x == 6 + indent or x == 41 - indent:
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['wood_mid'] if (x + y) % 2 == 0 else PAL['wood_dark']
+
+    # Tesoro che trabocca dallo scrigno (Oro, lingotti e gemme)
     # Lingotti d'oro
-    for bx, by in [(120, 140), (220, 130), (320, 140), (170, 110), (270, 100)]:
-        draw.polygon([(bx, by + 30), (bx + 80, by + 30), (bx + 95, by), (bx + 15, by)], fill=COL_GOLD_BRIGHT, outline=COL_INK, width=4)
-        draw.polygon([(bx + 15, by), (bx + 95, by), (bx + 85, by - 15), (bx + 5, by - 15)], fill=(254, 240, 138, 255), outline=COL_INK, width=4)
+    for bx, by in [(12, 11), (20, 10), (28, 11), (16, 9), (24, 8)]:
+        for lx in range(bx, bx + 6):
+            pix[lx, by] = PAL['gold_high']
+            pix[lx, by + 1] = PAL['gold_light']
+            pix[lx, by + 2] = PAL['gold_mid']
+            pix[lx, by + 3] = PAL['gold_shadow']
 
-    # Lingotti d'acciaio / ferro
-    for bx, by in [(90, 165), (350, 165), (220, 165)]:
-        draw.polygon([(bx, by + 25), (bx + 70, by + 25), (bx + 85, by), (bx + 15, by)], fill=COL_IRON_LIGHT, outline=COL_INK, width=4)
+    # Lingotti di ferro
+    for bx, by in [(9, 13), (33, 13)]:
+        for lx in range(bx, bx + 5):
+            pix[lx, by] = PAL['iron_white']
+            pix[lx, by + 1] = PAL['iron_light']
+            pix[lx, by + 2] = PAL['iron_dark']
 
-    # Monete e gemme
-    for mx, my, col in [(180, 165, COL_GOLD_BRIGHT), (240, 180, COL_GOLD_DEEP), (280, 165, COL_GEM_RUBY), (320, 180, COL_GEM_CYAN)]:
-        draw.ellipse([mx - 14, my - 14, mx + 14, my + 14], fill=col, outline=COL_WHITE, width=3)
+    # Rubini e gemme celesti scintillanti
+    pix[19, 13] = PAL['ruby_light']
+    pix[20, 13] = PAL['ruby_mid']
+    pix[27, 13] = PAL['gem_cyan_white']
+    pix[28, 13] = PAL['gem_cyan_light']
 
-    # 4. Bordature metalliche e lucchetto dorato con rubino
-    draw.rectangle([60, 160, 452, 195], fill=COL_BRONZE, outline=COL_INK, width=8)
-    draw.rectangle([60, 405, 452, 440], fill=COL_BRONZE, outline=COL_INK, width=8)
-    draw.rectangle([100, 160, 140, 440], fill=COL_GOLD_DEEP, outline=COL_INK, width=6)
-    draw.rectangle([372, 160, 412, 440], fill=COL_GOLD_DEEP, outline=COL_INK, width=6)
+    # Fasce di rinforzo in ottone dorato sui bordi
+    for y in range(13, 28):
+        for x in [8, 9, 38, 39]:
+            pix[x, y] = PAL['gold_light'] if y % 2 == 0 else PAL['gold_mid']
 
-    # Lucchetto centrale regale
-    draw.rounded_rectangle([220, 240, 292, 340], radius=14, fill=COL_GOLD_BRIGHT, outline=COL_INK, width=8)
-    draw.ellipse([242, 270, 270, 298], fill=COL_GEM_RUBY, outline=COL_INK, width=4)
+    # Fascia orizzontale mediana
+    for x in range(7, 41):
+        pix[x, 14] = PAL['gold_mid']
+        pix[x, 15] = PAL['gold_dark']
 
-    final = finalize_sprite(im, target_size=(256, 192), outline_width=10, outline_color=(254, 240, 138, 250))
-    final.save(OUT_DIR / 'sprite_forziere.png')
-    print('Generato sprite_forziere.png')
+    # Lucchetto regale con rubino
+    for y in range(17, 23):
+        for x in range(22, 26):
+            pix[x, y] = PAL['gold_light']
+    pix[23, 19] = PAL['ruby_light']
+    pix[24, 19] = PAL['ruby_mid']
+    pix[23, 20] = PAL['black']
+    pix[24, 20] = PAL['black']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_forziere.png')
+    print('Pixel art generata: sprite_forziere.png (192x128)')
 
 
-def gen_muro():
-    """Bastione difensivo in blocchi squadrati di granito nanico con merlature e sigilli."""
-    im = Image.new('RGBA', (512, 256), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(im)
+def gen_pixel_muro():
+    """Bastione difensivo in pietra 16-bit: mattoni di granito squadrati, merli e malta."""
+    w, h = 48, 18
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
 
-    # 1. Base del bastione in pietra massiccia
-    draw.rounded_rectangle([20, 40, 492, 230], radius=16, fill=COL_STONE_DARK, outline=COL_INK, width=10)
+    # Muro di fondo
+    for y in range(4, 17):
+        for x in range(2, 46):
+            if x == 2 or x == 45 or y == 16:
+                pix[x, y] = PAL['black']
+            else:
+                # Righe di mattoni sfalsate
+                is_mortar_y = (y % 4 == 3)
+                row = y // 4
+                shift = 4 if row % 2 == 1 else 0
+                is_mortar_x = ((x + shift) % 8 == 0)
+                if is_mortar_y or is_mortar_x:
+                    pix[x, y] = PAL['stone_shadow']
+                else:
+                    pix[x, y] = PAL['stone_mid'] if (x + y) % 2 == 0 else PAL['stone_light']
 
     # Merlature superiori
-    for mx in [30, 130, 230, 330, 430]:
-        draw.rectangle([mx, 15, mx + 52, 45], fill=COL_STONE_MID, outline=COL_INK, width=6)
+    merlons = [(4, 11), (15, 22), (26, 33), (37, 44)]
+    for x1, x2 in merlons:
+        for y in range(1, 5):
+            for x in range(x1, x2):
+                if y == 1 or x == x1 or x == x2 - 1:
+                    pix[x, y] = PAL['black']
+                else:
+                    pix[x, y] = PAL['stone_light'] if y == 2 else PAL['stone_mid']
 
-    # Blocchi di mattoni con bisellature
-    for y, shift in [(50, 0), (105, 45), (160, 0)]:
-        for x in range(25, 480, 90):
-            bx = x + shift
-            if bx + 80 <= 490:
-                draw.rounded_rectangle([bx, y, bx + 78, y + 46], radius=6, fill=COL_STONE_MID, outline=COL_STONE_LIGHT, width=3)
-                draw.line([(bx + 4, y + 4), (bx + 74, y + 4)], fill=(168, 162, 158, 255), width=3)
+    # Sigillo runico nanico d'oro al centro
+    pix[23, 9] = PAL['gold_high']
+    pix[24, 9] = PAL['gold_high']
+    pix[22, 10] = PAL['gold_light']
+    pix[23, 10] = PAL['fire_dark']
+    pix[24, 10] = PAL['fire_dark']
+    pix[25, 10] = PAL['gold_light']
+    pix[23, 11] = PAL['gold_dark']
+    pix[24, 11] = PAL['gold_dark']
 
-    # Sigillo runico nanico al centro
-    draw.ellipse([216, 95, 296, 175], fill=COL_GOLD_DEEP, outline=COL_GOLD_BRIGHT, width=6)
-    draw.polygon([(256, 108), (280, 155), (232, 155)], fill=COL_STONE_DARK)
-
-    final = finalize_sprite(im, target_size=(256, 128), outline_width=8, outline_color=(226, 232, 240, 240))
-    final.save(OUT_DIR / 'sprite_muro.png')
-    print('Generato sprite_muro.png')
-
-
-def gen_balista():
-    """Balista a ripetizione automatica nanica con affusto girevole e dardo infuocato."""
-    im = Image.new('RGBA', (512, 512), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(im)
-
-    # 1. Piattaforma circolare girevole in pietra runica
-    draw.ellipse([80, 260, 432, 470], fill=COL_STONE_DARK, outline=COL_INK, width=12)
-    draw.ellipse([110, 280, 402, 450], fill=COL_STONE_MID, outline=COL_BRONZE, width=8)
-
-    # Borchie di fissaggio a terra
-    for ang in [0, 45, 90, 135, 180, 225, 270, 315]:
-        rad = math.radians(ang)
-        bx = 256 + math.cos(rad) * 125
-        by = 365 + math.sin(rad) * 65
-        draw.ellipse([bx - 8, by - 8, bx + 8, by + 8], fill=COL_GOLD_BRIGHT, outline=COL_INK, width=3)
-
-    # 2. Torretta centrale e affusto in legno e bronzo
-    draw.rounded_rectangle([200, 180, 312, 380], radius=18, fill=COL_WOOD_DARK, outline=COL_INK, width=10)
-    draw.line([(256, 120), (256, 360)], fill=COL_BRONZE, width=28)
-
-    # 3. Grande arco da guerra composito orizzontale
-    bow_pts = [(40, 220), (140, 150), (256, 140), (372, 150), (472, 220)]
-    for i in range(len(bow_pts) - 1):
-        draw.line([bow_pts[i], bow_pts[i + 1]], fill=COL_WOOD_LIGHT, width=26)
-        draw.line([bow_pts[i], bow_pts[i + 1]], fill=COL_GOLD_BRIGHT, width=8)
-
-    # Corda tesa in acciaio runico
-    draw.line([(40, 220), (256, 260)], fill=COL_IRON_LIGHT, width=6)
-    draw.line([(472, 220), (256, 260)], fill=COL_IRON_LIGHT, width=6)
-
-    # 4. Dardo d'acciaio con punta infuocata pronto al tiro
-    draw.line([(256, 270), (256, 70)], fill=COL_IRON_LIGHT, width=16)
-    draw.polygon([(256, 40), (232, 85), (280, 85)], fill=COL_FIRE_YELLOW, outline=COL_FIRE_ORANGE, width=4)
-    # Piume di coda rosse
-    draw.polygon([(240, 270), (230, 290), (256, 280)], fill=COL_FIRE_RED)
-    draw.polygon([(272, 270), (282, 290), (256, 280)], fill=COL_FIRE_RED)
-
-    final = finalize_sprite(im, target_size=(256, 256), outline_width=10, outline_color=(254, 240, 138, 240))
-    final.save(OUT_DIR / 'sprite_balista.png')
-    print('Generato sprite_balista.png')
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_muro.png')
+    print('Pixel art generata: sprite_muro.png (192x72)')
 
 
-def gen_scudo_nanico():
-    """Scudo torre nanico intagliato con testa di cinghiale e borchie d'oro (Paddle)."""
-    im = Image.new('RGBA', (512, 256), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(im)
+def gen_pixel_balista():
+    """Balista 16-bit: affusto girevole su pietra, grande arco teso in legno e dardo d'acciaio infuocato."""
+    w, h = 32, 32
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
 
-    # 1. Corpo dello scudo a losanga massiccia
-    shield_pts = [
-        (30, 128), (90, 40), (422, 40), (482, 128),
-        (422, 216), (90, 216)
+    # Base circolare in pietra
+    for y in range(18, 30):
+        for x in range(6, 26):
+            dx = x - 16
+            dy = (y - 24) * 1.6
+            if dx * dx + dy * dy < 70:
+                if dx * dx + dy * dy >= 52:
+                    pix[x, y] = PAL['black']
+                else:
+                    pix[x, y] = PAL['stone_mid'] if (x + y) % 2 == 0 else PAL['stone_dark']
+
+    # Perno e torretta in legno
+    for y in range(12, 23):
+        for x in range(13, 19):
+            pix[x, y] = PAL['wood_dark'] if x == 13 or x == 18 else PAL['wood_mid']
+
+    # Grande arco da guerra in legno e ottone
+    bow_pts = [
+        (3, 16), (4, 15), (6, 13), (9, 11), (13, 10), (16, 9),
+        (19, 10), (23, 11), (26, 13), (28, 15), (29, 16)
     ]
-    draw.polygon(shield_pts, fill=COL_WOOD_DARK, outline=COL_INK)
+    for x, y in bow_pts:
+        pix[x, y] = PAL['wood_light']
+        pix[x, y + 1] = PAL['wood_dark']
+        pix[x, y - 1] = PAL['black']
 
-    # Finitura in ferro azzurrato
-    inner_pts = [
-        (46, 128), (98, 56), (414, 56), (466, 128),
-        (414, 200), (98, 200)
+    # Corda tesa
+    for x in range(4, 16):
+        pix[x, 15] = PAL['iron_light']
+    for x in range(16, 29):
+        pix[x, 15] = PAL['iron_light']
+
+    # Dardo centrale con punta di fuoco
+    for y in range(4, 19):
+        pix[15, y] = PAL['iron_light']
+        pix[16, y] = PAL['iron_white']
+    # Punta infuocata del dardo
+    pix[15, 3] = PAL['fire_yellow']
+    pix[16, 3] = PAL['fire_white']
+    pix[15, 2] = PAL['fire_orange']
+    pix[16, 2] = PAL['fire_orange']
+    pix[15, 1] = PAL['fire_mid']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_balista.png')
+    print('Pixel art generata: sprite_balista.png (128x128)')
+
+
+def gen_pixel_scudo():
+    """Scudo torre nanico (paddle) 16-bit: placca d'acciaio, borchie dorate, martello centrale."""
+    w, h = 48, 16
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Sagoma a losanga dello scudo nanico
+    for y in range(2, 14):
+        indent = abs(7 - y)
+        for x in range(2 + indent, 46 - indent):
+            if x == 2 + indent or x == 45 - indent or y == 2 or y == 13:
+                pix[x, y] = PAL['black']
+            elif y == 3 or y == 12 or x < 5 + indent or x > 42 - indent:
+                # Bordo dorato borchiato
+                pix[x, y] = PAL['gold_light'] if (x + y) % 2 == 0 else PAL['gold_mid']
+            else:
+                # Corpo centrale in acciaio bluastro
+                pix[x, y] = PAL['iron_light'] if y < 8 else PAL['iron_mid']
+
+    # Stemma centrale del martello nanico
+    # Testa martello
+    for x in range(21, 27):
+        pix[x, 5] = PAL['gold_high']
+        pix[x, 6] = PAL['gold_light']
+    # Manico
+    pix[23, 7] = PAL['wood_mid']
+    pix[24, 7] = PAL['wood_mid']
+    pix[23, 8] = PAL['wood_mid']
+    pix[24, 8] = PAL['wood_mid']
+    pix[23, 9] = PAL['wood_dark']
+    pix[24, 9] = PAL['wood_dark']
+
+    # Borchie d'oro laterali
+    for bx in [8, 14, 33, 39]:
+        pix[bx, 7] = PAL['gold_high']
+        pix[bx, 8] = PAL['gold_dark']
+
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_scudo.png')
+    print('Pixel art generata: sprite_scudo.png (192x64)')
+
+
+def gen_pixel_sfera():
+    """Sfera runica 16-bit: sfera metallica rotonda a pixel, luce speculare, incisione runica e bordo netto."""
+    w, h = 16, 16
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
+
+    # Cerchio 16-bit pixel
+    mask = [
+        "....XXXXXX....",
+        "..XXXXXXXXXX..",
+        ".XXXXXXXXXXXX.",
+        ".XXXXXXXXXXXX.",
+        "XXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXX",
+        "XXXXXXXXXXXXXX",
+        ".XXXXXXXXXXXX.",
+        ".XXXXXXXXXXXX.",
+        "..XXXXXXXXXX..",
+        "....XXXXXX...."
     ]
-    draw.polygon(inner_pts, fill=(51, 65, 85, 255), outline=COL_BRONZE, width=8)
 
-    # 2. Fascia dorata centrale con rune
-    draw.rectangle([140, 70, 372, 186], fill=COL_GOLD_DEEP, outline=COL_GOLD_BRIGHT, width=6)
+    for y in range(16):
+        row = mask[y]
+        for x in range(14):
+            if row[x] == 'X':
+                # Ombreggiatura sferica (luce in alto a sinistra, ombra in basso a destra)
+                dist_light = (x - 4) ** 2 + (y - 4) ** 2
+                dist_edge = (x - 7) ** 2 + (y - 7) ** 2
+                
+                if dist_edge >= 42:
+                    pix[x + 1, y] = PAL['black']
+                elif dist_light < 5:
+                    pix[x + 1, y] = PAL['iron_white'] # Specular highlight
+                elif dist_light < 18:
+                    pix[x + 1, y] = PAL['iron_light']
+                elif dist_light < 40:
+                    pix[x + 1, y] = PAL['iron_mid']
+                else:
+                    pix[x + 1, y] = PAL['iron_dark']
 
-    # Cresta centrale nanica (Testa di martello e stella a 8 punte)
-    cx, cy = 256, 128
-    draw.ellipse([cx - 36, cy - 36, cx + 36, cy + 36], fill=COL_IRON_LIGHT, outline=COL_INK, width=6)
-    draw.polygon([(cx, cy - 30), (cx + 8, cy - 8), (cx + 30, cy), (cx + 8, cy + 8),
-                  (cx, cy + 30), (cx - 8, cy + 8), (cx - 30, cy), (cx - 8, cy - 8)], fill=COL_FIRE_RED)
+    # Croce runica d'oro al centro
+    runic_pixels = [(7, 7), (8, 7), (6, 8), (7, 8), (8, 8), (9, 8), (7, 9), (8, 9)]
+    for rx, ry in runic_pixels:
+        pix[rx, ry] = PAL['gold_light']
 
-    # Borchie d'oro angolari
-    for bx, by in [(90, 60), (422, 60), (90, 196), (422, 196), (40, 128), (472, 128)]:
-        draw.ellipse([bx - 12, by - 12, bx + 12, by + 12], fill=COL_GOLD_BRIGHT, outline=COL_INK, width=4)
-
-    final = finalize_sprite(im, target_size=(256, 128), outline_width=8, outline_color=(254, 243, 199, 250))
-    final.save(OUT_DIR / 'sprite_scudo.png')
-    print('Generato sprite_scudo.png')
-
-
-def gen_sfera_runica():
-    """Sfera runica magica con incisioni luminescenti e nucleo metallico."""
-    im = Image.new('RGBA', (256, 256), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(im)
-
-    cx, cy, r = 128, 128, 96
-    # 1. Base sfera metallica con sfumatura radiale
-    draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=COL_IRON_LIGHT, outline=COL_INK, width=8)
-
-    # Ombreggiatura interna
-    draw.ellipse([cx - r + 16, cy - r + 16, cx + r - 8, cy + r - 8], fill=(203, 213, 225, 255))
-    draw.ellipse([cx - r + 40, cy - r + 40, cx + r - 12, cy + r - 12], fill=COL_IRON_MID)
-
-    # 2. Incisioni runiche dorate
-    draw.line([(cx - 50, cy), (cx + 50, cy)], fill=COL_GOLD_DEEP, width=10)
-    draw.line([(cx, cy - 50), (cx, cy + 50)], fill=COL_GOLD_DEEP, width=10)
-    draw.line([(cx - 35, cy - 35), (cx + 35, cy + 35)], fill=COL_GOLD_BRIGHT, width=8)
-    draw.line([(cx + 35, cy - 35), (cx - 35, cy + 35)], fill=COL_GOLD_BRIGHT, width=8)
-
-    # Riflesso speculare brillante
-    draw.ellipse([cx - 55, cy - 55, cx - 25, cy - 25], fill=COL_WHITE)
-
-    final = finalize_sprite(im, target_size=(128, 128), outline_width=6, outline_color=(254, 240, 138, 255))
-    final.save(OUT_DIR / 'sprite_sfera.png')
-    print('Generato sprite_sfera.png')
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_sfera.png')
+    print('Pixel art generata: sprite_sfera.png (64x64)')
 
 
-def gen_goblin():
-    """Goblin invasore con elmo cornuto, occhi gialli fiammeggianti e zanne."""
-    im = Image.new('RGBA', (512, 512), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(im)
+def gen_pixel_goblin():
+    """Goblin 16-bit: elmo di ferro cornuto, grandi orecchie a punta, occhi rossi minacciosi e zanne."""
+    w, h = 24, 24
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
 
-    # 1. Grandi orecchie a punta goblin
-    draw.polygon([(180, 240), (40, 180), (140, 290)], fill=COL_GOBLIN_SKIN, outline=COL_INK, width=8)
-    draw.polygon([(170, 235), (70, 195), (140, 275)], fill=(248, 113, 113, 255)) # Interno rosa
+    # Orecchie a punta verdi
+    for i in range(5):
+        pix[4 - i, 10 + i] = PAL['goblin_dark']
+        pix[5 - i, 10 + i] = PAL['goblin_mid']
+        pix[6 - i, 10 + i] = PAL['goblin_light']
+        pix[19 + i, 10 + i] = PAL['goblin_dark']
+        pix[18 + i, 10 + i] = PAL['goblin_mid']
+        pix[17 + i, 10 + i] = PAL['goblin_light']
 
-    draw.polygon([(332, 240), (472, 180), (372, 290)], fill=COL_GOBLIN_SKIN, outline=COL_INK, width=8)
-    draw.polygon([(342, 235), (442, 195), (372, 275)], fill=(248, 113, 113, 255))
+    # Faccia goblin verde
+    for y in range(8, 18):
+        for x in range(7, 17):
+            pix[x, y] = PAL['goblin_mid'] if (x + y) % 2 == 0 else PAL['goblin_light']
 
-    # 2. Testa e corpo del goblin
-    draw.rounded_rectangle([150, 340, 362, 490], radius=32, fill=(113, 63, 18, 255), outline=COL_INK, width=10)
-    draw.ellipse([160, 170, 352, 360], fill=COL_GOBLIN_SKIN, outline=COL_INK, width=10)
+    # Elmo di ferro con corna
+    # Calotta elmo
+    for y in range(4, 10):
+        for x in range(7, 17):
+            if y == 4 or x == 7 or x == 16:
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['iron_mid'] if y == 5 else PAL['iron_dark']
+    # Corna
+    pix[6, 5] = PAL['fire_white']
+    pix[5, 4] = PAL['fire_white']
+    pix[4, 3] = PAL['fire_white']
+    pix[17, 5] = PAL['fire_white']
+    pix[18, 4] = PAL['fire_white']
+    pix[19, 3] = PAL['fire_white']
 
-    # 3. Elmo di ferro con corna
-    draw.ellipse([145, 110, 367, 240], fill=COL_IRON_DARK, outline=COL_INK, width=10)
-    # Cerchiatura metallica
-    draw.rectangle([145, 180, 367, 215], fill=COL_IRON_MID, outline=COL_INK, width=6)
+    # Occhi rossi incandescenti
+    pix[9, 11] = PAL['fire_mid']
+    pix[10, 11] = PAL['fire_yellow']
+    pix[13, 11] = PAL['fire_yellow']
+    pix[14, 11] = PAL['fire_mid']
 
-    # Corna ossee ricurve
-    draw.polygon([(160, 150), (60, 80), (140, 110)], fill=(254, 243, 199, 255), outline=COL_INK, width=8)
-    draw.polygon([(352, 150), (452, 80), (372, 110)], fill=(254, 243, 199, 255), outline=COL_INK, width=8)
+    # Zanne e bocca
+    pix[10, 15] = PAL['black']
+    pix[11, 15] = PAL['black']
+    pix[12, 15] = PAL['black']
+    pix[13, 15] = PAL['black']
+    pix[10, 14] = PAL['iron_white'] # Zanna sx
+    pix[13, 14] = PAL['iron_white'] # Zanna dx
 
-    # 4. Viso: Occhi gialli minacciosi, naso adunco e zanne
-    draw.polygon([(185, 230), (235, 250), (195, 270)], fill=COL_GOLD_BRIGHT, outline=COL_INK, width=4)
-    draw.ellipse([215, 245, 227, 257], fill=COL_FIRE_RED) # Pupilla rossa
+    # Corpo / Tunica in cuoio
+    for y in range(18, 23):
+        for x in range(6, 18):
+            if x == 6 or x == 17 or y == 22:
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['wood_dark'] if x % 2 == 0 else PAL['wood_shadow']
 
-    draw.polygon([(327, 230), (277, 250), (317, 270)], fill=COL_GOLD_BRIGHT, outline=COL_INK, width=4)
-    draw.ellipse([285, 245, 297, 257], fill=COL_FIRE_RED)
-
-    # Naso e bocca piena di zanne
-    draw.polygon([(256, 240), (235, 290), (277, 290)], fill=COL_GOBLIN_DARK, outline=COL_INK, width=4)
-    draw.line([(190, 320), (322, 320)], fill=COL_INK, width=8)
-    draw.polygon([(210, 320), (220, 300), (230, 320)], fill=COL_WHITE)
-    draw.polygon([(282, 320), (292, 300), (302, 320)], fill=COL_WHITE)
-
-    final = finalize_sprite(im, target_size=(256, 256), outline_width=10, outline_color=(239, 68, 68, 240))
-    final.save(OUT_DIR / 'sprite_goblin.png')
-    print('Generato sprite_goblin.png')
+    out = scale_nearest(im, 4)
+    out.save(OUT_DIR / 'sprite_goblin.png')
+    print('Pixel art generata: sprite_goblin.png (96x96)')
 
 
-def gen_caverna_sfondo():
-    """Texture di sfondo della rocca sotterranea con pietre scure, venature e pilastri."""
-    w, h = 540, 960
-    im = Image.new('RGBA', (w, h), COL_BG_DARK)
-    draw = ImageDraw.Draw(im)
+def gen_pixel_caverna_sfondo():
+    """Sfondo rocca nanica 16-bit: blocchi di pietra squadrati a pixel, pilastri intagliati e torce a muro."""
+    w, h = 135, 240
+    im = create_pixel_canvas(w, h)
+    pix = im.load()
 
-    # Blocchi di roccia muraria sullo sfondo
-    block_h = 48
-    for row in range(h // block_h + 2):
-        y = row * block_h
-        shift = 30 if row % 2 == 1 else 0
-        for col in range(-1, w // 70 + 2):
-            x = col * 70 + shift
-            draw.rectangle([x, y, x + 66, y + block_h - 4], fill=(28, 17, 13, 255), outline=(15, 9, 7, 255), width=2)
-            if (row + col) % 7 == 0:
-                # Piccola gemma luminescente nella roccia
-                draw.ellipse([x + 30, y + 20, x + 36, y + 26], fill=COL_GEM_CYAN)
+    # Muro di fondo in blocchi di granito sotterraneo
+    block_h = 10
+    block_w = 16
+    for y in range(h):
+        row = y // block_h
+        is_mortar_y = (y % block_h == 0)
+        shift = 8 if row % 2 == 1 else 0
+        for x in range(w):
+            is_mortar_x = ((x + shift) % block_w == 0)
+            if is_mortar_y or is_mortar_x:
+                pix[x, y] = PAL['black']
+            else:
+                # Trama di pietra antica ditherata
+                if (x + y * 3) % 11 == 0:
+                    pix[x, y] = PAL['stone_shadow']
+                elif (x + y * 7) % 13 == 0:
+                    pix[x, y] = PAL['stone_mid']
+                else:
+                    pix[x, y] = PAL['stone_dark']
 
-    # Pilastri laterali intagliati
-    draw.rectangle([0, 0, 40, h], fill=(38, 24, 18, 255), outline=COL_INK, width=4)
-    draw.rectangle([w - 40, 0, w, h], fill=(38, 24, 18, 255), outline=COL_INK, width=4)
+    # Pilastri di roccia massiccia ai lati
+    for y in range(h):
+        for x in range(10):
+            if x == 0 or x == 9:
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['stone_mid'] if x < 4 else PAL['stone_dark']
+        for x in range(w - 10, w):
+            if x == w - 10 or x == w - 1:
+                pix[x, y] = PAL['black']
+            else:
+                pix[x, y] = PAL['stone_dark'] if x < w - 4 else PAL['stone_shadow']
 
-    # Bagliore caldo centrale
-    glow = Image.new('RGBA', (w, h), (0, 0, 0, 0))
-    g_draw = ImageDraw.Draw(glow)
-    g_draw.ellipse([w // 2 - 200, 200, w // 2 + 200, 600], fill=(249, 115, 22, 35))
-    glow = glow.filter(ImageFilter.GaussianBlur(radius=60))
-    im = Image.alpha_composite(im, glow)
+    # Torce a muro con pixel di fuoco ardente
+    for tx, ty in [(20, 60), (w - 20, 60), (20, 150), (w - 20, 150)]:
+        # Staffa in ferro
+        pix[tx, ty + 2] = PAL['iron_light']
+        pix[tx, ty + 3] = PAL['iron_dark']
+        # Fiamma 16-bit
+        pix[tx, ty] = PAL['fire_white']
+        pix[tx - 1, ty] = PAL['fire_yellow']
+        pix[tx + 1, ty] = PAL['fire_yellow']
+        pix[tx, ty - 1] = PAL['fire_orange']
+        pix[tx, ty - 2] = PAL['fire_mid']
 
-    im.resize((w, h), Image.Resampling.LANCZOS).save(OUT_DIR / 'sfondo_caverna.png')
-    print('Generato sfondo_caverna.png')
+    out = scale_nearest(im, 4) # 135*4 = 540, 240*4 = 960! Esattamente la risoluzione virtuale del gioco!
+    out.save(OUT_DIR / 'sfondo_caverna.png')
+    print('Pixel art generata: sfondo_caverna.png (540x960)')
 
 
 if __name__ == '__main__':
-    print('=== Inizio generazione Sprite Fantasy Nanici ===')
-    gen_miniera()
-    gen_forgia_aperta()
-    gen_forgia_chiusa()
-    gen_forziere()
-    gen_muro()
-    gen_balista()
-    gen_scudo_nanico()
-    gen_sfera_runica()
-    gen_goblin()
-    gen_caverna_sfondo()
-    print('=== Tutti gli sprite fantasy sono stati generati con successo in res/drawable! ===')
-
+    print('=== Inizio generazione Asset TRUE PIXEL ART (16-bit / 32-bit) ===')
+    gen_pixel_miniera()
+    gen_pixel_forgia_aperta()
+    gen_pixel_forgia_chiusa()
+    gen_pixel_forziere()
+    gen_pixel_muro()
+    gen_pixel_balista()
+    gen_pixel_scudo()
+    gen_pixel_sfera()
+    gen_pixel_goblin()
+    gen_pixel_caverna_sfondo()
+    print('=== Tutti gli sprite 16-bit Pixel Art generati con successo! ===')

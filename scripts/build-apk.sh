@@ -19,7 +19,7 @@ if [ ! -f android/app/debug.keystore ]; then
         -dname "CN=Ferro e Rimbalzi Debug,O=Sabotino,C=IT"
 fi
 
-echo "=== 2.5. Generazione asset grafici Fantasy Nanici (Pillow supersampled) ==="
+echo "=== 2.5. Generazione asset grafici Fantasy Nanici (Pixel Art 16-bit) ==="
 python3 scripts/generate_sprites.py
 
 echo "=== 3. Compilazione APK Android (Gradle nativo verticale) ==="
@@ -29,13 +29,13 @@ android/gradlew -p android --offline --no-daemon assembleDebug
 
 echo "=== 4. Preparazione pacchetto downloads ==="
 mkdir -p downloads
-cp android/app/build/outputs/apk/debug/app-debug.apk downloads/ferro-e-rimbalzi-0.9.0-debug.apk
+cp android/app/build/outputs/apk/debug/app-debug.apk downloads/ferro-e-rimbalzi-0.9.1-debug.apk
 
 echo "=== 5. Verifica integrità APK ==="
 python3 scripts/check-apk.py
 
 echo "=== 6. Generazione checksum SHA256 ==="
-sha256sum downloads/ferro-e-rimbalzi-0.9.0-debug.apk > downloads/ferro-e-rimbalzi-0.9.0-debug.apk.sha256
-cat downloads/ferro-e-rimbalzi-0.9.0-debug.apk.sha256
+sha256sum downloads/ferro-e-rimbalzi-0.9.1-debug.apk > downloads/ferro-e-rimbalzi-0.9.1-debug.apk.sha256
+cat downloads/ferro-e-rimbalzi-0.9.1-debug.apk.sha256
 echo "Compilazione e verifica completate con successo!"
 
