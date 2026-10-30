@@ -33,27 +33,27 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private int lastHp = 6;
     private int lastKills = 0;
 
-    // Game Feel & Camera Trauma (Pattern 1 from game-feel skill)
+    // Game Feel: Camera Trauma (pattern da game-feel skill)
     private float trauma = 0f;
     private float ballSquashX = 1f;
     private float ballSquashY = 1f;
 
-    // Pre-allocated Starfield & Cosmic Dust
-    private static class Star {
+    // Atmosfera sotterranea: Faville della forgia e pulviscolo di miniera
+    private static class Sparkle {
         float x, y, speed, size;
         int alpha;
     }
-    private final Star[] stars = new Star[45];
+    private final Sparkle[] sparkles = new Sparkle[50];
 
-    // Pre-allocated Particle Pool (Zero GC allocation)
+    // Particelle per impatti su roccia, fiamme e metallo fuso (Zero GC allocations)
     private static class Particle {
         boolean active = false;
         float x, y, vx, vy;
         float life, maxLife, size;
         int color;
-        int type; // 0: spark, 1: ember, 2: debris, 3: plasma
+        int type; // 0: scintille incudine, 1: braci forgia, 2: schegge roccia, 3: fuoco runico
     }
-    private final Particle[] particles = new Particle[140];
+    private final Particle[] particles = new Particle[150];
     private int nextParticleIdx = 0;
 
     // Paints
@@ -62,32 +62,32 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private final Paint paintText = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint paintGlow = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-    // Reusable Paths & Rects to eliminate runtime GC allocations
-    private final Path tempPath = new Path();
-    private final Path asteroidPath = new Path();
-    private final Path shipPath = new Path();
-    private final Path enemyPath = new Path();
+    // Reusable Paths & Rects per annullare Garbage Collection
+    private final Path rockPath = new Path();
+    private final Path shieldPath = new Path();
+    private final Path goblinPath = new Path();
+    private final Path boltPath = new Path();
     private final RectF tempRect = new RectF();
 
-    // Touch regions in virtual coordinates (Portrait W=540, H=960)
+    // Regioni touch in coordinate virtuali (Portrait W=540, H=960)
     private final RectF btnPause = new RectF(475f, 12f, 525f, 54f);
 
-    // Wave Mode Bottom Buttons (Thumb Friendly)
+    // Pulsanti inferiori ergonomici (fase Ondata)
     private final RectF btnForge = new RectF(15f, 850f, 175f, 935f);
     private final RectF btnBurn = new RectF(185f, 850f, 345f, 935f);
     private final RectF btnRecall = new RectF(355f, 850f, 525f, 935f);
 
-    // Build Mode Bottom Buttons
+    // Pulsanti inferiori (fase Cantiere)
     private final RectF btnWall = new RectF(15f, 850f, 165f, 935f);
     private final RectF btnTurret = new RectF(175f, 850f, 325f, 935f);
     private final RectF btnStartWave = new RectF(335f, 850f, 525f, 935f);
 
-    // Upgrade Cards (Vertical stack for mobile portrait)
+    // Schede pergamena talenti
     private final RectF cardUpgrade1 = new RectF(30f, 210f, 510f, 360f);
     private final RectF cardUpgrade2 = new RectF(30f, 380f, 510f, 530f);
     private final RectF cardUpgrade3 = new RectF(30f, 550f, 510f, 700f);
 
-    // Pause/Result Overlay Buttons
+    // Pulsanti finestra modale
     private final RectF btnResume = new RectF(150f, 480f, 390f, 545f);
     private final RectF btnRestart = new RectF(150f, 565f, 390f, 630f);
 
@@ -109,17 +109,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         game = new Game();
         lastHp = game.hp;
 
-        // Initialize Starfield
-        for (int i = 0; i < stars.length; i++) {
-            stars[i] = new Star();
-            stars[i].x = (float) (Math.random() * Game.W);
-            stars[i].y = (float) (Math.random() * Game.H);
-            stars[i].speed = 12f + (float) (Math.random() * 28f);
-            stars[i].size = 1f + (float) (Math.random() * 2.2f);
-            stars[i].alpha = 60 + (int) (Math.random() * 150);
+        // Inizializza faville e pulviscolo di caverna
+        for (int i = 0; i < sparkles.length; i++) {
+            sparkles[i] = new Sparkle();
+            sparkles[i].x = (float) (Math.random() * Game.W);
+            sparkles[i].y = (float) (Math.random() * Game.H);
+            sparkles[i].speed = 10f + (float) (Math.random() * 26f);
+            sparkles[i].size = 1f + (float) (Math.random() * 2.2f);
+            sparkles[i].alpha = 50 + (int) (Math.random() * 140);
         }
 
-        // Initialize Particle Pool
+        // Inizializza pool particelle
         for (int i = 0; i < particles.length; i++) {
             particles[i] = new Particle();
         }
@@ -137,18 +137,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             p.x = x;
             p.y = y;
             float angle = (float) (Math.random() * Math.PI * 2.0);
-            float speed = (type == 1) ? 20f + (float) (Math.random() * 45f) : 40f + (float) (Math.random() * 160f);
-            if (type == 1) { // Embers float upward
-                p.vx = (float) (Math.cos(angle) * speed * 0.5f);
-                p.vy = -Math.abs((float) (Math.sin(angle) * speed)) - 25f;
-            } else if (type == 3) { // Thruster plasma flies down
-                p.vx = ((float) Math.random() - 0.5f) * 35f;
-                p.vy = 60f + (float) (Math.random() * 90f);
+            float speed = (type == 1) ? 15f + (float) (Math.random() * 40f) : 35f + (float) (Math.random() * 150f);
+            if (type == 1) { // Braci della fornace che salgono
+                p.vx = (float) (Math.cos(angle) * speed * 0.4f);
+                p.vy = -Math.abs((float) (Math.sin(angle) * speed)) - 20f;
             } else {
                 p.vx = (float) (Math.cos(angle) * speed);
                 p.vy = (float) (Math.sin(angle) * speed);
             }
-            p.life = 0.2f + (float) (Math.random() * 0.45f);
+            p.life = 0.2f + (float) (Math.random() * 0.4f);
             p.maxLife = p.life;
             p.size = (type == 2) ? 3.5f + (float) (Math.random() * 3f) : 2f + (float) (Math.random() * 2.5f);
             p.color = color;
@@ -220,16 +217,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if (dt > 0.05f) dt = 0.05f;
 
             if (!paused) {
-                // Update Starfield
-                for (Star s : stars) {
-                    s.y += s.speed * dt;
-                    if (s.y > Game.H) {
-                        s.y = 0f;
+                // Aggiorna pulviscolo e faville ambientali
+                for (Sparkle s : sparkles) {
+                    s.y -= s.speed * dt; // Sale verso l'alto come aria calda di miniera
+                    if (s.y < 65f) {
+                        s.y = Game.H;
                         s.x = (float) (Math.random() * Game.W);
                     }
                 }
 
-                // Update Particles
+                // Aggiorna particelle
                 for (Particle p : particles) {
                     if (!p.active) continue;
                     p.life -= dt;
@@ -239,38 +236,30 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                     }
                     p.x += p.vx * dt;
                     p.y += p.vy * dt;
-                    if (p.type == 0 || p.type == 2) {
-                        p.vx *= 0.94f;
-                        p.vy *= 0.94f;
-                    }
+                    p.vx *= 0.95f;
+                    p.vy *= 0.95f;
                 }
 
-                // Paddle thruster particles
-                if ("wave".equals(game.phase) && !paused) {
-                    spawnParticles(game.paddle.x - 22f, game.paddle.y + 14f, 1, 0xFF4FD1C5, 3);
-                    spawnParticles(game.paddle.x + 22f, game.paddle.y + 14f, 1, 0xFF4FD1C5, 3);
-                }
-
-                // Forge flame embers when open
+                // Faville continue dalla forgia attiva
                 if (game.forgeOpen && "wave".equals(game.phase)) {
                     for (Game.Building b : game.buildings) {
-                        if ("forge".equals(b.type) && Math.random() < 0.28) {
-                            spawnParticles(b.x + (float) Math.random() * b.w, b.y + 8f, 1, 0xFFFF8A00, 1);
+                        if ("forge".equals(b.type) && Math.random() < 0.35) {
+                            spawnParticles(b.x + (float) Math.random() * b.w, b.y + 6f, 1, 0xFFFF8A00, 1);
                         }
                     }
                 }
 
-                // Ball squash recovery
+                // Riacquisto forma della sfera
                 ballSquashX += (1f - ballSquashX) * 12f * dt;
                 ballSquashY += (1f - ballSquashY) * 12f * dt;
 
-                // Step simulation
+                // Simulazione di gioco
                 game.step(dt);
 
-                // Detect game events for Audio & Visual Juice
+                // Feedback audio ed effetti
                 if (game.hp < lastHp) {
                     addTrauma(0.55f);
-                    AudioHelper.playBreach();
+                    AudioHelper.playWarhorn();
                     lastHp = game.hp;
                 } else if (game.hp > lastHp) {
                     lastHp = game.hp;
@@ -278,27 +267,27 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
                 if (game.kills > lastKills) {
                     addTrauma(0.22f);
-                    AudioHelper.playExplosion();
+                    AudioHelper.playGoblinHit();
                     lastKills = game.kills;
                 }
 
                 int statsCount = game.stats.mined + game.stats.smelted + game.delivered;
                 if (statsCount > lastStatsCount) {
                     if (game.stats.smelted > 0 && statsCount == lastStatsCount + 1 && game.ball.metal > 0) {
-                        AudioHelper.playSmelt();
+                        AudioHelper.playForgeFire();
                         addTrauma(0.12f);
                     } else if (game.delivered > 0 && statsCount == lastStatsCount + 1 && game.ball.metal == 0) {
-                        AudioHelper.playDeliver();
+                        AudioHelper.playCoins();
                         addTrauma(0.18f);
                     } else {
-                        AudioHelper.playTone(480f, 0.08f);
+                        AudioHelper.playAnvil();
                     }
                     lastStatsCount = statsCount;
                 }
 
-                // Shots fired
-                if (!game.shots.isEmpty() && Math.random() < 0.3) {
-                    AudioHelper.playLaser();
+                // Colpi di balista sparati
+                if (!game.shots.isEmpty() && Math.random() < 0.35) {
+                    AudioHelper.playBallista();
                 }
             }
 
@@ -354,17 +343,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private void handleTouchDown(float tx, float ty) {
         if (btnPause.contains(tx, ty)) {
             togglePause();
-            AudioHelper.playTone(440f);
+            AudioHelper.playAnvil();
             return;
         }
 
         if (paused) {
             if (btnResume.contains(tx, ty)) {
                 paused = false;
-                AudioHelper.playTone(480f);
+                AudioHelper.playAnvil();
             } else if (btnRestart.contains(tx, ty)) {
                 resetGame();
-                AudioHelper.playTone(440f);
+                AudioHelper.playAnvil();
             }
             return;
         }
@@ -372,15 +361,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         if ("upgrade".equals(game.phase)) {
             if (cardUpgrade1.contains(tx, ty)) {
                 game.chooseUpgrade("cargo");
-                AudioHelper.playTone(560f);
+                AudioHelper.playAnvil();
                 addTrauma(0.15f);
             } else if (cardUpgrade2.contains(tx, ty)) {
                 game.chooseUpgrade("paddle");
-                AudioHelper.playTone(560f);
+                AudioHelper.playAnvil();
                 addTrauma(0.15f);
             } else if (cardUpgrade3.contains(tx, ty)) {
                 game.chooseUpgrade("damage");
-                AudioHelper.playTone(560f);
+                AudioHelper.playAnvil();
                 addTrauma(0.15f);
             }
             return;
@@ -389,7 +378,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         if ("won".equals(game.phase) || "short".equals(game.phase) || "lost".equals(game.phase)) {
             if (btnRestart.contains(tx, ty)) {
                 resetGame();
-                AudioHelper.playTone(440f);
+                AudioHelper.playAnvil();
             }
             return;
         }
@@ -398,31 +387,30 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if (btnStartWave.contains(tx, ty)) {
                 placingType = null;
                 game.startWave();
-                AudioHelper.playTone(520f);
+                AudioHelper.playWarhorn();
                 addTrauma(0.2f);
                 return;
             }
             if (btnWall.contains(tx, ty)) {
                 placingType = "wall".equals(placingType) ? null : "wall";
-                AudioHelper.playTone(380f);
+                AudioHelper.playAnvil();
                 return;
             }
             if (btnTurret.contains(tx, ty)) {
                 placingType = "turret".equals(placingType) ? null : "turret";
-                AudioHelper.playTone(380f);
+                AudioHelper.playAnvil();
                 return;
             }
 
             if (placingType != null) {
                 if (game.build(placingType, tx, ty)) {
-                    AudioHelper.playTone(330f);
-                    spawnParticles(tx, ty, 16, 0xFF4FD1C5, 0);
+                    AudioHelper.playAnvil();
+                    spawnParticles(tx, ty, 16, 0xFFEAB308, 0);
                     placingType = null;
                 }
                 return;
             }
 
-            // Drag existing buildings
             for (int i = game.buildings.size() - 1; i >= 0; i--) {
                 Game.Building b = game.buildings.get(i);
                 if (tx >= b.x - 8f && tx <= b.x + b.w + 8f && ty >= b.y - 8f && ty <= b.y + b.h + 8f) {
@@ -437,19 +425,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         if ("wave".equals(game.phase)) {
             if (btnForge.contains(tx, ty)) {
                 game.forgeOpen = !game.forgeOpen;
-                AudioHelper.playTone(game.forgeOpen ? 460f : 320f);
+                if (game.forgeOpen) AudioHelper.playForgeFire();
+                else AudioHelper.playAnvil();
                 return;
             }
             if (btnBurn.contains(tx, ty)) {
                 game.burn = !game.burn;
-                AudioHelper.playTone(game.burn ? 560f : 360f);
+                AudioHelper.playAnvil();
                 return;
             }
             if (btnRecall.contains(tx, ty)) {
                 if (game.recall()) {
-                    AudioHelper.playTone(400f);
+                    AudioHelper.playWarhorn();
                     addTrauma(0.25f);
-                    spawnParticles(game.ball.x, game.ball.y, 25, 0xFFE6BA76, 0);
+                    spawnParticles(game.ball.x, game.ball.y, 25, 0xFFF59E0B, 0);
                 }
                 return;
             }
@@ -491,10 +480,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if (game.ball.held && ty < 840f) {
                 updateAim(tx, ty);
                 if (game.launch()) {
-                    AudioHelper.playTone(520f);
-                    ballSquashX = 0.7f;
-                    ballSquashY = 1.35f;
-                    spawnParticles(game.paddle.x, game.paddle.y, 18, 0xFF4FD1C5, 0);
+                    AudioHelper.playAnvil();
+                    ballSquashX = 0.72f;
+                    ballSquashY = 1.3f;
+                    spawnParticles(game.paddle.x, game.paddle.y, 16, 0xFFF59E0B, 0);
                 }
             }
         }
@@ -510,19 +499,19 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     // ==========================================
-    // RENDERING VERTICALE DIESELPUNK VOID-MINER
+    // RENDERING FANTASY NANICO (DWARVEN FORGE & DUNGEON)
     // ==========================================
 
     private void drawGame(Canvas canvas, float dt) {
-        // Deep Space Background Gradient
+        // Pietra scura della caverna sotterranea
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setShader(new LinearGradient(0f, 0f, 0f, Game.H, 0xFF050812, 0xFF0B1424, Shader.TileMode.CLAMP));
+        paintFill.setShader(new LinearGradient(0f, 0f, 0f, Game.H, 0xFF140C09, 0xFF24150F, Shader.TileMode.CLAMP));
         canvas.drawRect(0f, 0f, getWidth(), getHeight(), paintFill);
         paintFill.setShader(null);
 
         canvas.save();
 
-        // Screen Shake calculation via decaying trauma (game-feel pattern)
+        // Screen Shake nanico (game-feel)
         float shake = trauma * trauma;
         float shakeX = (float) (Math.sin(game.elapsed * 42f) * 12f * shake);
         float shakeY = (float) (Math.cos(game.elapsed * 38f) * 9f * shake);
@@ -531,76 +520,83 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.translate(offsetX + shakeX * viewScale, offsetY + shakeY * viewScale);
         canvas.scale(viewScale, viewScale);
 
-        // Draw Ambient Starfield & Space Dust
-        for (Star s : stars) {
-            paintFill.setColor(Color.argb(s.alpha, 160, 210, 255));
+        // Luce calda delle torce agli angoli
+        paintGlow.setStyle(Paint.Style.FILL);
+        paintGlow.setShader(new RadialGradient(40f, 100f, 180f, 0x44FF8A00, 0x00FF8A00, Shader.TileMode.CLAMP));
+        canvas.drawCircle(40f, 100f, 180f, paintGlow);
+        paintGlow.setShader(new RadialGradient(Game.W - 40f, 100f, 180f, 0x44FF8A00, 0x00FF8A00, Shader.TileMode.CLAMP));
+        canvas.drawCircle(Game.W - 40f, 100f, 180f, paintGlow);
+        paintGlow.setShader(null);
+
+        // Faville e pulviscolo dorato delle fucine
+        for (Sparkle s : sparkles) {
+            paintFill.setColor(Color.argb(s.alpha, 255, 170, 60));
             canvas.drawCircle(s.x, s.y, s.size, paintFill);
         }
 
-        // Draw Building Zone Grid Blueprint during Build Phase
+        // Griglia di costruzione: Cantiere di scalpellatura nanica
         if ("build".equals(game.phase)) {
-            drawBlueprintGrid(canvas);
+            drawMasonryGrid(canvas);
         }
 
-        // Sector Arena Perimeter & Hazard Bulkheads
-        drawArenaPerimeter(canvas);
+        // Pareti di roccia e travi di quercia borchiate
+        drawMinePerimeter(canvas);
 
-        // Core Defense Tripwire
-        drawDefensePerimeter(canvas);
+        // Trincea difensiva dei Nani (Palizzata)
+        drawDwarvenTrench(canvas);
 
-        // Mines (Jagged Crystalline Asteroids)
+        // Giacimenti minerari: Vene di ferro grezzo nella roccia viva
         for (int i = 0; i < game.mines.size(); i++) {
-            drawMine(canvas, game.mines.get(i), i);
+            drawOreVein(canvas, game.mines.get(i), i);
         }
 
-        // Buildings (Smelter, Depot, Sponde, Turrets)
+        // Edifici: Fucina nanica, Tesoreria, Mura e Baliste
         for (Game.Building b : game.buildings) {
             drawBuilding(canvas, b);
         }
 
-        // Turret Railgun Laser Beams
+        // Dardi infuocati scagliati dalle Baliste
         for (Game.Shot shot : game.shots) {
             paintStroke.setStyle(Paint.Style.STROKE);
             paintStroke.setStrokeWidth(3.5f);
             int alpha = (int) (255 * (shot.life / 0.2f));
-            paintStroke.setColor(Color.argb(alpha, 100, 240, 255));
+            paintStroke.setColor(Color.argb(alpha, 245, 158, 11)); // Fiamma dardo
             canvas.drawLine(shot.x, shot.y, shot.tx, shot.ty, paintStroke);
-            // Inner core beam
             paintStroke.setStrokeWidth(1.5f);
-            paintStroke.setColor(Color.argb(alpha, 255, 255, 255));
+            paintStroke.setColor(Color.argb(alpha, 255, 255, 230));
             canvas.drawLine(shot.x, shot.y, shot.tx, shot.ty, paintStroke);
         }
 
-        // Enemies (Scarab Drones & Void Harvesters)
+        // Invasori: Goblin guerrieri e Ladri Koboldi
         for (Game.Enemy e : game.enemies) {
             if (e.hp <= 0) continue;
-            drawEnemy(canvas, e);
+            drawMonster(canvas, e);
         }
 
-        // Player Skiff (Paddle)
-        drawPlayerPaddle(canvas);
+        // Lo Scudo Torre dei Nani (Racchetta)
+        drawDwarvenShield(canvas);
 
-        // Aiming trajectory when ball is held
+        // Linea di mira runica
         if (game.ball.held && "wave".equals(game.phase) && !paused) {
-            drawAimLine(canvas);
+            drawRunicAim(canvas);
         }
 
-        // Ball Trail (Plasma / Fire Tail)
-        drawBallTrail(canvas);
+        // Scia di fuoco runico della sfera
+        drawRunicTrail(canvas);
 
-        // The Ball (Core Extractor Orb)
-        drawBall(canvas);
+        // La Sfera Magica Runica
+        drawRunicOrb(canvas);
 
-        // Particles System (Sparks, Embers, Debris)
+        // Particelle (Scintille di forgia, schegge rocciose)
         drawParticles(canvas);
 
-        // Floating Damage / Event Text
+        // Testo fluttuante (danno, estrazione, fusione)
         drawEffects(canvas);
 
-        // HUD Dashboard & Thumb Buttons
+        // HUD fantasy: Stendardo di ferro e legno, stemmi scudo, pergamena
         drawHUD(canvas);
 
-        // Overlays
+        // Finestre modali stile pergamena
         if (paused) {
             drawPauseOverlay(canvas);
         } else if ("upgrade".equals(game.phase)) {
@@ -612,9 +608,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.restore();
     }
 
-    private void drawBlueprintGrid(Canvas canvas) {
+    private void drawMasonryGrid(Canvas canvas) {
         paintStroke.setStyle(Paint.Style.STROKE);
-        paintStroke.setColor(0x184FD1C5);
+        paintStroke.setColor(0x22D97706);
         paintStroke.setStrokeWidth(1f);
         for (float x = 20f; x < Game.W; x += 32f) {
             canvas.drawLine(x, 220f, x, 730f, paintStroke);
@@ -623,166 +619,165 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             canvas.drawLine(16f, y, Game.W - 16f, y, paintStroke);
         }
 
-        // Construction border
-        paintStroke.setColor(0x554FD1C5);
+        paintStroke.setColor(0x66D97706);
         paintStroke.setStrokeWidth(1.5f);
         canvas.drawRect(16f, 220f, Game.W - 16f, 730f, paintStroke);
 
         paintText.setTextSize(11f);
-        paintText.setColor(0xFF4FD1C5);
+        paintText.setColor(0xFFFBBF24);
         paintText.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("▶ SETTORE EDIFICABILE (Posiziona o riposiziona strutture)", 24f, 238f, paintText);
+        canvas.drawText("⚒ CANTIERE DEI NANI (Edifica mura e baliste con il ferro)", 24f, 238f, paintText);
     }
 
-    private void drawArenaPerimeter(Canvas canvas) {
-        // Metallic upper border under HUD
+    private void drawMinePerimeter(Canvas canvas) {
+        // Trave portante superiore in legno di quercia
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(0xFF1E293B);
-        canvas.drawRect(0f, 65f, Game.W, 72f, paintFill);
+        paintFill.setColor(0xFF382214);
+        canvas.drawRect(0f, 65f, Game.W, 73f, paintFill);
 
-        // Left wall with hazard chevron insets
-        paintFill.setColor(0xFF162032);
+        // Travi laterali borchiate con ferro battuto
+        paintFill.setColor(0xFF2E1C12);
         canvas.drawRect(0f, 65f, 14f, 825f, paintFill);
+        canvas.drawRect(Game.W - 14f, 65f, Game.W, 825f, paintFill);
+
+        // Borchie di ferro
+        paintFill.setColor(0xFF78716C);
+        for (float y = 90f; y < 820f; y += 50f) {
+            canvas.drawCircle(7f, y, 2.5f, paintFill);
+            canvas.drawCircle(Game.W - 7f, y, 2.5f, paintFill);
+        }
+
+        // Bordo in pietra lavorata
         paintStroke.setStyle(Paint.Style.STROKE);
-        paintStroke.setColor(0xFF334155);
+        paintStroke.setColor(0xFF573E30);
         paintStroke.setStrokeWidth(1.5f);
         canvas.drawLine(14f, 65f, 14f, 825f, paintStroke);
-
-        // Right wall with hazard chevron insets
-        paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(0xFF162032);
-        canvas.drawRect(Game.W - 14f, 65f, Game.W, 825f, paintFill);
         canvas.drawLine(Game.W - 14f, 65f, Game.W - 14f, 825f, paintStroke);
-
-        // Subtle neon boundary runners
-        paintStroke.setColor(0x3338BDF8);
-        paintStroke.setStrokeWidth(1f);
-        canvas.drawLine(15f, 72f, 15f, 820f, paintStroke);
-        canvas.drawLine(Game.W - 15f, 72f, Game.W - 15f, 820f, paintStroke);
     }
 
-    private void drawDefensePerimeter(Canvas canvas) {
-        // Pulsing glowing laser tripwire
-        float pulse = (float) (Math.sin(game.elapsed * 6f) * 0.5 + 0.5);
-        int alpha = 100 + (int) (120 * pulse);
+    private void drawDwarvenTrench(Canvas canvas) {
+        // Palizzata e trincea di difesa nanica
         paintStroke.setStyle(Paint.Style.STROKE);
         paintStroke.setStrokeWidth(2.5f);
-        paintStroke.setColor(Color.argb(alpha, 239, 68, 68));
+        paintStroke.setColor(0xFFB91C1C);
         canvas.drawLine(14f, 760f, Game.W - 14f, 760f, paintStroke);
 
-        // Emitter nodes
+        // Punte di palizzata in legno
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(0xFFDC2626);
-        canvas.drawCircle(14f, 760f, 4f, paintFill);
-        canvas.drawCircle(Game.W - 14f, 760f, 4f, paintFill);
+        paintFill.setColor(0xFF78350F);
+        for (float x = 20f; x < Game.W - 20f; x += 22f) {
+            rockPath.reset();
+            rockPath.moveTo(x - 5f, 764f);
+            rockPath.lineTo(x, 754f);
+            rockPath.lineTo(x + 5f, 764f);
+            rockPath.close();
+            canvas.drawPath(rockPath, paintFill);
+        }
 
         paintText.setTextSize(9f);
-        paintText.setColor(0xCCEF4444);
+        paintText.setColor(0xFFDC2626);
         paintText.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("PERIMETRO DIFESA NUCLEO", Game.W / 2f, 755f, paintText);
+        canvas.drawText("BARRICATA DELLA FORTEZZA NANICA", Game.W / 2f, 750f, paintText);
     }
 
-    private void drawMine(Canvas canvas, Game.Mine m, int index) {
+    private void drawOreVein(Canvas canvas, Game.Mine m, int index) {
         boolean flash = (game.elapsed - game.hits.getOrDefault("mine" + index, -10f)) < 0.18f;
 
-        // Draw Jagged Asteroid Body
-        asteroidPath.reset();
-        asteroidPath.moveTo(m.x + 8f, m.y);
-        asteroidPath.lineTo(m.x + m.w - 12f, m.y + 4f);
-        asteroidPath.lineTo(m.x + m.w, m.y + 14f);
-        asteroidPath.lineTo(m.x + m.w - 6f, m.y + m.h - 6f);
-        asteroidPath.lineTo(m.x + m.w - 24f, m.y + m.h);
-        asteroidPath.lineTo(m.x + 12f, m.y + m.h - 2f);
-        asteroidPath.lineTo(m.x, m.y + m.h - 14f);
-        asteroidPath.lineTo(m.x + 4f, m.y + 12f);
-        asteroidPath.close();
+        // Vena rocciosa frastagliata
+        rockPath.reset();
+        rockPath.moveTo(m.x + 6f, m.y);
+        rockPath.lineTo(m.x + m.w - 10f, m.y + 3f);
+        rockPath.lineTo(m.x + m.w, m.y + 16f);
+        rockPath.lineTo(m.x + m.w - 8f, m.y + m.h - 4f);
+        rockPath.lineTo(m.x + m.w - 26f, m.y + m.h);
+        rockPath.lineTo(m.x + 10f, m.y + m.h - 2f);
+        rockPath.lineTo(m.x, m.y + m.h - 12f);
+        rockPath.lineTo(m.x + 3f, m.y + 10f);
+        rockPath.close();
 
-        // Shaded Asteroid Texture
+        // Colore roccia viva
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(flash ? 0xFFE2B770 : 0xFF283430);
-        canvas.drawPath(asteroidPath, paintFill);
+        paintFill.setColor(flash ? 0xFFF59E0B : 0xFF382C26);
+        canvas.drawPath(rockPath, paintFill);
 
-        // Metallic Rocky Outline
         paintStroke.setStyle(Paint.Style.STROKE);
         paintStroke.setStrokeWidth(2f);
-        paintStroke.setColor(flash ? 0xFFFFF1C2 : 0xFF475B54);
-        canvas.drawPath(asteroidPath, paintStroke);
+        paintStroke.setColor(flash ? 0xFFFEF3C7 : 0xFF5C4A42);
+        canvas.drawPath(rockPath, paintStroke);
 
-        // Glowing Crystalline Mineral Veins (Pulsing)
-        float veinPulse = (float) (Math.sin(game.elapsed * 4f + index) * 0.3 + 0.7);
-        int veinAlpha = (int) (220 * veinPulse);
-        paintStroke.setColor(flash ? 0xFFFFFFFF : Color.argb(veinAlpha, 245, 180, 50));
+        // Vene dorate e bronzee di ferro grezzo e gemme
+        float pulse = (float) (Math.sin(game.elapsed * 4f + index) * 0.35 + 0.65);
+        paintStroke.setColor(flash ? 0xFFFFFFFF : Color.argb((int) (230 * pulse), 245, 158, 11));
         paintStroke.setStrokeWidth(2.5f);
 
-        canvas.drawLine(m.x + 24f, m.y + 12f, m.x + 55f, m.y + 24f, paintStroke);
-        canvas.drawLine(m.x + 55f, m.y + 24f, m.x + 78f, m.y + 16f, paintStroke);
-        canvas.drawLine(m.x + 78f, m.y + 16f, m.x + 105f, m.y + 30f, paintStroke);
+        canvas.drawLine(m.x + 18f, m.y + 12f, m.x + 50f, m.y + 24f, paintStroke);
+        canvas.drawLine(m.x + 50f, m.y + 24f, m.x + 75f, m.y + 15f, paintStroke);
+        canvas.drawLine(m.x + 75f, m.y + 15f, m.x + 110f, m.y + 30f, paintStroke);
 
-        // Mineral Crystals
-        paintFill.setColor(Color.argb(veinAlpha, 255, 210, 80));
-        canvas.drawCircle(m.x + 35f, m.y + 16f, 3f, paintFill);
-        canvas.drawCircle(m.x + 70f, m.y + 22f, 3.5f, paintFill);
-        canvas.drawCircle(m.x + 95f, m.y + 26f, 3f, paintFill);
+        // Cristalli di minerale
+        paintFill.setColor(Color.argb((int) (240 * pulse), 253, 224, 71));
+        canvas.drawCircle(m.x + 32f, m.y + 16f, 3.5f, paintFill);
+        canvas.drawCircle(m.x + 68f, m.y + 22f, 4f, paintFill);
+        canvas.drawCircle(m.x + 94f, m.y + 24f, 3.5f, paintFill);
 
-        // Label
         paintText.setTextSize(10f);
-        paintText.setColor(0xFFF1E6C8);
+        paintText.setColor(0xFFFDE68A);
         paintText.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("GIACIMENTO", m.x + m.w / 2f, m.y + m.h / 2f + 4f, paintText);
+        canvas.drawText("MINIERA DI FERRO", m.x + m.w / 2f, m.y + m.h / 2f + 4f, paintText);
     }
 
     private void drawBuilding(Canvas canvas, Game.Building b) {
         tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
 
         if ("wall".equals(b.type)) {
-            // Reinforced Energy Barrier
+            // Muro merlato in pietra da fortezza
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF1E2E2A);
-            canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+            paintFill.setColor(0xFF44403C);
+            canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
+
+            // Merlature
+            paintFill.setColor(0xFF292524);
+            for (float mx = b.x + 4f; mx < b.x + b.w - 10f; mx += 24f) {
+                canvas.drawRect(mx, b.y, mx + 12f, b.y + 6f, paintFill);
+            }
 
             paintStroke.setStyle(Paint.Style.STROKE);
             paintStroke.setStrokeWidth(2f);
-            paintStroke.setColor(0xFF10B981);
-            canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
-
-            // Center neon conduit
-            paintStroke.setStrokeWidth(1.5f);
-            paintStroke.setColor(0x8034D399);
-            canvas.drawLine(b.x + 10f, b.y + b.h / 2f, b.x + b.w - 10f, b.y + b.h / 2f, paintStroke);
+            paintStroke.setColor(0xFF78716C);
+            canvas.drawRoundRect(tempRect, 4f, 4f, paintStroke);
 
             paintText.setTextSize(10f);
-            paintText.setColor(0xFF6EE7B7);
+            paintText.setColor(0xFFE7E5E4);
             paintText.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText("SPONDA DEFENSIVA", b.x + b.w / 2f, b.y + b.h / 2f + 3.5f, paintText);
+            canvas.drawText("MURA NANICHE (SPONDA)", b.x + b.w / 2f, b.y + b.h / 2f + 4f, paintText);
 
         } else if ("forge".equals(b.type)) {
-            // Blast Furnace Smelter
+            // Grande Forgia Nanica in Pietra Vulcanica
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF1F1D2B);
-            canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+            paintFill.setColor(0xFF291B16);
+            canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
 
-            // Molten metal vat interior
-            float moltenTop = b.y + (game.forgeOpen ? 12f : 18f);
-            tempRect.set(b.x + 8f, moltenTop, b.x + b.w - 8f, b.y + b.h - 8f);
+            // Bocca della fornace / Crogiolo ribollente
+            tempRect.set(b.x + 8f, b.y + 10f, b.x + b.w - 8f, b.y + b.h - 8f);
             if (game.forgeOpen) {
-                paintFill.setShader(new LinearGradient(b.x, b.y, b.x, b.y + b.h, 0xFFFF7A00, 0xFFFFD000, Shader.TileMode.CLAMP));
+                paintFill.setShader(new LinearGradient(b.x, b.y, b.x, b.y + b.h, 0xFFFF3300, 0xFFFFCC00, Shader.TileMode.CLAMP));
                 canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
                 paintFill.setShader(null);
             } else {
-                paintFill.setColor(0xFF4A3425);
+                paintFill.setColor(0xFF57382B); // Portone chiuso
                 canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
             }
 
-            // Chassis border
+            // Telaio in ferro battuto con rivetti
             tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
             paintStroke.setStyle(Paint.Style.STROKE);
-            paintStroke.setStrokeWidth(2f);
-            paintStroke.setColor(game.forgeOpen ? 0xFFFF9900 : 0xFF78716C);
-            canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
+            paintStroke.setStrokeWidth(2.5f);
+            paintStroke.setColor(game.forgeOpen ? 0xFFF97316 : 0xFF78716C);
+            canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
 
-            // Corner rivets
+            // Incudine e rivetti
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFFCBD5E1);
+            paintFill.setColor(0xFFD6D3D1);
             canvas.drawCircle(b.x + 5f, b.y + 5f, 2f, paintFill);
             canvas.drawCircle(b.x + b.w - 5f, b.y + 5f, 2f, paintFill);
             canvas.drawCircle(b.x + 5f, b.y + b.h - 5f, 2f, paintFill);
@@ -792,55 +787,53 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             paintText.setTextAlign(Paint.Align.CENTER);
             if (game.forgeOpen) {
                 paintText.setColor(0xFFFFFFFF);
-                canvas.drawText("⚡ FONDERIA ATTIVA ➔ [FUSIONE]", b.x + b.w / 2f, b.y + b.h / 2f + 4f, paintText);
+                canvas.drawText("🔥 FORGIA ACCESA ➔ [FONDE IN FERRO]", b.x + b.w / 2f, b.y + b.h / 2f + 4f, paintText);
             } else {
-                paintText.setColor(0xFFE2E8F0);
-                canvas.drawText("TETTO CHIUSO (SPONDA SOLIDA)", b.x + b.w / 2f, b.y + b.h / 2f + 4f, paintText);
+                paintText.setColor(0xFFF5F5F4);
+                canvas.drawText("PORTONE CHIUSO (SPONDA SOLIDA)", b.x + b.w / 2f, b.y + b.h / 2f + 4f, paintText);
             }
 
         } else if ("depot".equals(b.type)) {
-            // Orbital Cargo Dock
+            // Forziere del Regno Nanico
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF0F262E);
-            canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
+            paintFill.setColor(0xFF451A03); // Legno di quercia scuro
+            canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
 
-            // Cyan magnetic tractor field
-            tempRect.set(b.x + 8f, b.y + 8f, b.x + b.w - 8f, b.y + b.h - 8f);
-            paintFill.setColor(0xFF0E3A47);
-            canvas.drawRoundRect(tempRect, 5f, 5f, paintFill);
+            // Fasce di ferro borchiato
+            paintFill.setColor(0xFF292524);
+            canvas.drawRect(b.x + 14f, b.y, b.x + 22f, b.y + b.h, paintFill);
+            canvas.drawRect(b.x + b.w - 22f, b.y, b.x + b.w - 14f, b.y + b.h, paintFill);
 
-            tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
             paintStroke.setStyle(Paint.Style.STROKE);
             paintStroke.setStrokeWidth(2f);
-            paintStroke.setColor(0xFF06B6D4);
-            canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
+            paintStroke.setColor(0xFFF59E0B); // Finiture in oro e ferro
+            canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
 
-            // Animated intake force rings
-            float flow = (game.elapsed * 60f) % (b.w - 24f);
-            paintStroke.setStrokeWidth(1.5f);
-            paintStroke.setColor(0x8038BDF8);
-            canvas.drawLine(b.x + 12f + flow, b.y + 12f, b.x + 12f + flow, b.y + b.h - 12f, paintStroke);
+            // Serratura centrale del forziere
+            paintFill.setColor(0xFFFBBF24);
+            canvas.drawCircle(b.x + b.w / 2f, b.y + b.h / 2f - 4f, 5f, paintFill);
+            canvas.drawRect(b.x + b.w / 2f - 2f, b.y + b.h / 2f - 4f, b.x + b.w / 2f + 2f, b.y + b.h / 2f + 7f, paintFill);
 
             paintText.setTextSize(11f);
-            paintText.setColor(0xFF67E8F9);
+            paintText.setColor(0xFFFEF3C7);
             paintText.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText("DEPOSITO CARGO (INCASSA FE)", b.x + b.w / 2f, b.y + b.h / 2f + 4f, paintText);
+            canvas.drawText("FORZIERE REALE (INCASSA FERRO)", b.x + b.w / 2f, b.y + b.h / 2f + 16f, paintText);
 
         } else if ("turret".equals(b.type)) {
-            // Railgun Defense Turret
+            // Balista Nanica a dardi
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF1E293B);
+            paintFill.setColor(0xFF3B2F2F);
             canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
 
             paintStroke.setStyle(Paint.Style.STROKE);
             paintStroke.setStrokeWidth(2f);
-            paintStroke.setColor(0xFF38BDF8);
+            paintStroke.setColor(0xFFD97706);
             canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
 
             float cx = b.x + b.w / 2f;
             float cy = b.y + b.h / 2f;
 
-            // Turret rotating head aimed at nearest enemy
+            // Mira la balista verso il nemico più vicino
             Game.Enemy target = null;
             double minDist = 300.0;
             for (Game.Enemy e : game.enemies) {
@@ -854,218 +847,213 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             }
             float angle = target != null ? (float) Math.atan2(target.y - cy, target.x - cx) : (float) (-Math.PI / 2.0);
 
-            // Laser sight targeting line
-            if (target != null) {
-                paintStroke.setStrokeWidth(1f);
-                paintStroke.setColor(0x4038BDF8);
-                canvas.drawLine(cx, cy, target.x + target.w / 2f, target.y + target.h / 2f, paintStroke);
-            }
-
-            // Dual barrels
+            // Corda e fusto della balista orientati
             canvas.save();
             canvas.translate(cx, cy);
             canvas.rotate((float) Math.toDegrees(angle));
 
-            paintFill.setColor(0xFF64748B);
-            canvas.drawRect(0f, -4f, 18f, -1.5f, paintFill);
-            canvas.drawRect(0f, 1.5f, 18f, 4f, paintFill);
-
-            // Turret Core Ball
-            paintFill.setColor(0xFF38BDF8);
-            canvas.drawCircle(0f, 0f, 7f, paintFill);
-            paintFill.setColor(0xFFFFFFFF);
-            canvas.drawCircle(0f, 0f, 3f, paintFill);
+            // Fusto in legno
+            paintFill.setColor(0xFF78350F);
+            canvas.drawRect(-4f, -3f, 16f, 3f, paintFill);
+            // Arco in ferro della balista
+            paintStroke.setColor(0xFFD6D3D1);
+            paintStroke.setStrokeWidth(2f);
+            canvas.drawLine(10f, -12f, 14f, 0f, paintStroke);
+            canvas.drawLine(14f, 0f, 10f, 12f, paintStroke);
 
             canvas.restore();
 
             paintText.setTextSize(9f);
-            paintText.setColor(0xFF94A3B8);
+            paintText.setColor(0xFFFDE68A);
             paintText.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText("SENTINELLA", cx, b.y + b.h + 12f, paintText);
+            canvas.drawText("BALISTA", cx, b.y + b.h + 12f, paintText);
         }
     }
 
-    private void drawEnemy(Canvas canvas, Game.Enemy e) {
+    private void drawMonster(Canvas canvas, Game.Enemy e) {
         boolean thief = "thief".equals(e.type);
 
         if (thief) {
-            // Void Harvester: Sleek Delta Stealth Interceptor
-            enemyPath.reset();
-            enemyPath.moveTo(e.x + e.w / 2f, e.y + e.h); // Nose facing down towards defense line
-            enemyPath.lineTo(e.x + e.w, e.y + 4f);
-            enemyPath.lineTo(e.x + e.w - 8f, e.y);
-            enemyPath.lineTo(e.x + e.w / 2f, e.y + 8f);
-            enemyPath.lineTo(e.x + 8f, e.y);
-            enemyPath.lineTo(e.x, e.y + 4f);
-            enemyPath.close();
+            // Ladro Koboldo furtivo incappucciato
+            goblinPath.reset();
+            goblinPath.moveTo(e.x + e.w / 2f, e.y + e.h);
+            goblinPath.lineTo(e.x + e.w, e.y + 6f);
+            goblinPath.lineTo(e.x + e.w - 6f, e.y);
+            goblinPath.lineTo(e.x + 6f, e.y);
+            goblinPath.lineTo(e.x, e.y + 6f);
+            goblinPath.close();
 
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF2E1065); // Dark Purple
-            canvas.drawPath(enemyPath, paintFill);
+            paintFill.setColor(0xFF334155); // Cappuccio scuro
+            canvas.drawPath(goblinPath, paintFill);
 
-            paintStroke.setStyle(Paint.Style.STROKE);
-            paintStroke.setStrokeWidth(1.5f);
-            paintStroke.setColor(0xFFA855F7); // Violet neon
-            canvas.drawPath(enemyPath, paintStroke);
+            // Sacco del bottino
+            paintFill.setColor(0xFF92400E);
+            canvas.drawCircle(e.x + e.w - 8f, e.y + e.h - 6f, 6f, paintFill);
 
-            // Violet ion thruster flare
-            paintFill.setColor(0xFFC084FC);
-            canvas.drawCircle(e.x + e.w / 2f, e.y + 3f, 3f, paintFill);
+            // Occhi gialli penetranti
+            paintFill.setColor(0xFFFACC15);
+            canvas.drawCircle(e.x + e.w / 2f - 4f, e.y + 12f, 2.5f, paintFill);
+            canvas.drawCircle(e.x + e.w / 2f + 4f, e.y + 12f, 2.5f, paintFill);
 
         } else {
-            // Scarab Drone: Armored Heavy Beetle
-            enemyPath.reset();
-            enemyPath.moveTo(e.x + 6f, e.y);
-            enemyPath.lineTo(e.x + e.w - 6f, e.y);
-            enemyPath.lineTo(e.x + e.w, e.y + 10f);
-            enemyPath.lineTo(e.x + e.w - 4f, e.y + e.h);
-            enemyPath.lineTo(e.x + 4f, e.y + e.h);
-            enemyPath.lineTo(e.x, e.y + 10f);
-            enemyPath.close();
+            // Goblin Invasore delle Caverne con Elmo Cornuto
+            goblinPath.reset();
+            goblinPath.moveTo(e.x + 6f, e.y + 8f);
+            goblinPath.lineTo(e.x + e.w - 6f, e.y + 8f);
+            goblinPath.lineTo(e.x + e.w, e.y + e.h - 6f);
+            goblinPath.lineTo(e.x + e.w / 2f, e.y + e.h);
+            goblinPath.lineTo(e.x, e.y + e.h - 6f);
+            goblinPath.close();
 
+            // Pelle verde goblin
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(0xFF3F1D14); // Armored Rust Bronze
-            canvas.drawPath(enemyPath, paintFill);
+            paintFill.setColor(0xFF16A34A);
+            canvas.drawPath(goblinPath, paintFill);
 
-            paintStroke.setStyle(Paint.Style.STROKE);
-            paintStroke.setStrokeWidth(1.5f);
-            paintStroke.setColor(0xFFF97316); // Molten Orange
-            canvas.drawPath(enemyPath, paintStroke);
+            // Elmo di ferro con corna
+            paintFill.setColor(0xFF57534E);
+            canvas.drawRect(e.x + 4f, e.y + 2f, e.x + e.w - 4f, e.y + 10f, paintFill);
+            // Corna
+            paintStroke.setColor(0xFFE7E5E4);
+            paintStroke.setStrokeWidth(2f);
+            canvas.drawLine(e.x + 5f, e.y + 6f, e.x - 2f, e.y - 2f, paintStroke);
+            canvas.drawLine(e.x + e.w - 5f, e.y + 6f, e.x + e.w + 2f, e.y - 2f, paintStroke);
 
-            // Mandibles facing down
-            paintStroke.setColor(0xFFFDBA74);
-            canvas.drawLine(e.x + 10f, e.y + e.h, e.x + 7f, e.y + e.h + 5f, paintStroke);
-            canvas.drawLine(e.x + e.w - 10f, e.y + e.h, e.x + e.w - 7f, e.y + e.h + 5f, paintStroke);
-
-            // Glowing red optical sensor visor
-            paintFill.setColor(0xFFEF4444);
-            canvas.drawRect(e.x + 12f, e.y + e.h - 7f, e.x + e.w - 12f, e.y + e.h - 4f, paintFill);
+            // Occhi rossi minacciosi
+            paintFill.setColor(0xFFDC2626);
+            canvas.drawCircle(e.x + e.w / 2f - 6f, e.y + 16f, 2.5f, paintFill);
+            canvas.drawCircle(e.x + e.w / 2f + 6f, e.y + 16f, 2.5f, paintFill);
         }
 
-        // Segmented Armor HP Cells above enemy
+        // Punti vita nemico: Scudi/Gocce di sangue sopra la testa
         float cellW = (e.w - 4f) / e.maxHp;
         for (int k = 0; k < e.maxHp; k++) {
             float cx = e.x + 2f + k * cellW;
-            paintFill.setColor(k < e.hp ? (thief ? 0xFFC084FC : 0xFFF97316) : 0xFF334155);
+            paintFill.setColor(k < e.hp ? (thief ? 0xFFFACC15 : 0xFFDC2626) : 0xFF44403C);
             canvas.drawRect(cx, e.y - 7f, cx + cellW - 2f, e.y - 3f, paintFill);
         }
     }
 
-    private void drawPlayerPaddle(Canvas canvas) {
+    private void drawDwarvenShield(Canvas canvas) {
         float px = game.paddle.x;
         float py = game.paddle.y;
         float pw = game.paddleWidth;
 
-        // Heavy Alloy Hover-Skiff Chassis
-        shipPath.reset();
-        shipPath.moveTo(px - pw / 2f, py + 12f);
-        shipPath.lineTo(px - pw / 2f + 10f, py);
-        shipPath.lineTo(px + pw / 2f - 10f, py);
-        shipPath.lineTo(px + pw / 2f, py + 12f);
-        shipPath.lineTo(px + pw / 2f - 8f, py + 16f);
-        shipPath.lineTo(px - pw / 2f + 8f, py + 16f);
-        shipPath.close();
+        // Scudo da torre nanico in legno di quercia rinforzato con ferro
+        shieldPath.reset();
+        shieldPath.moveTo(px - pw / 2f, py + 14f);
+        shieldPath.lineTo(px - pw / 2f + 12f, py);
+        shieldPath.lineTo(px + pw / 2f - 12f, py);
+        shieldPath.lineTo(px + pw / 2f, py + 14f);
+        shieldPath.lineTo(px + pw / 2f - 10f, py + 18f);
+        shieldPath.lineTo(px - pw / 2f + 10f, py + 18f);
+        shieldPath.close();
 
-        // Hull Metallic Gradient
+        // Doghe in legno di quercia
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setShader(new LinearGradient(px, py, px, py + 16f, 0xFF334155, 0xFF0F172A, Shader.TileMode.CLAMP));
-        canvas.drawPath(shipPath, paintFill);
+        paintFill.setShader(new LinearGradient(px, py, px, py + 18f, 0xFF78350F, 0xFF451A03, Shader.TileMode.CLAMP));
+        canvas.drawPath(shieldPath, paintFill);
         paintFill.setShader(null);
 
-        // Alloy Border & Specular Ridge
-        paintStroke.setStyle(Paint.Style.STROKE);
-        paintStroke.setStrokeWidth(1.8f);
-        paintStroke.setColor(0xFF38BDF8); // Cyan energy trim
-        canvas.drawPath(shipPath, paintStroke);
-
-        // Center Magnetic Receptor Cup
-        paintFill.setColor(0xFF0284C7);
-        canvas.drawRect(px - 14f, py + 2f, px + 14f, py + 8f, paintFill);
-        paintFill.setColor(0xFFBAE6FD);
-        canvas.drawCircle(px, py + 5f, 3f, paintFill);
-
-        // Hazard chevron stripes on wings
-        paintStroke.setColor(0xFFF59E0B);
-        paintStroke.setStrokeWidth(1.5f);
-        canvas.drawLine(px - pw / 2f + 12f, py + 3f, px - pw / 2f + 18f, py + 12f, paintStroke);
-        canvas.drawLine(px + pw / 2f - 18f, py + 3f, px + pw / 2f - 12f, py + 12f, paintStroke);
-    }
-
-    private void drawAimLine(Canvas canvas) {
+        // Bordo borchiato in ferro battuto
         paintStroke.setStyle(Paint.Style.STROKE);
         paintStroke.setStrokeWidth(2f);
-        paintStroke.setColor(0xCC38BDF8);
+        paintStroke.setColor(0xFFD6D3D1);
+        canvas.drawPath(shieldPath, paintStroke);
+
+        // Umbone centrale in oro con runa nanica
+        paintFill.setColor(0xFFF59E0B);
+        canvas.drawCircle(px, py + 8f, 7f, paintFill);
+        paintFill.setColor(0xFFFEF3C7);
+        canvas.drawCircle(px, py + 8f, 3.5f, paintFill);
+
+        // Angolari protettivi in ottone
+        paintStroke.setColor(0xFFFBBF24);
+        paintStroke.setStrokeWidth(1.5f);
+        canvas.drawLine(px - pw / 2f + 8f, py + 3f, px - pw / 2f + 16f, py + 12f, paintStroke);
+        canvas.drawLine(px + pw / 2f - 8f, py + 3f, px + pw / 2f - 16f, py + 12f, paintStroke);
+    }
+
+    private void drawRunicAim(Canvas canvas) {
+        paintStroke.setStyle(Paint.Style.STROKE);
+        paintStroke.setStrokeWidth(2f);
+        paintStroke.setColor(0xCCF59E0B);
 
         float endX = game.ball.x + (float) Math.cos(game.aim) * 160f;
         float endY = game.ball.y + (float) Math.sin(game.aim) * 160f;
         canvas.drawLine(game.ball.x, game.ball.y, endX, endY, paintStroke);
 
-        // Aim Reticle Dot
+        // Mirino a runa
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(0xFF38BDF8);
+        paintFill.setColor(0xFFF59E0B);
         canvas.drawCircle(endX, endY, 4f, paintFill);
 
         paintText.setTextSize(12f);
-        paintText.setColor(0xFFE2E8F0);
+        paintText.setColor(0xFFFEF3C7);
         paintText.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("MIRA E RILASCIA PER LANCIARE LA SFERA", Game.W / 2f, game.paddle.y - 38f, paintText);
+        canvas.drawText("MIRA E RILASCIA PER LANCIARE LA SFERA RUNICA", Game.W / 2f, game.paddle.y - 36f, paintText);
     }
 
-    private void drawBallTrail(Canvas canvas) {
+    private void drawRunicTrail(Canvas canvas) {
         int tSize = game.ball.trail.size();
         for (int i = tSize - 1; i >= 0; i--) {
             Game.PointF t = game.ball.trail.get(i);
             float ratio = 1f - (float) i / (tSize + 1);
-            int alpha = (int) (130 * ratio);
+            int alpha = (int) (140 * ratio);
             paintFill.setStyle(Paint.Style.FILL);
             if (game.burn) {
-                paintFill.setColor(Color.argb(alpha, 255, 120, 20));
+                paintFill.setColor(Color.argb(alpha, 249, 115, 22)); // Fuoco drago
             } else {
-                paintFill.setColor(Color.argb(alpha, 56, 189, 248));
+                paintFill.setColor(Color.argb(alpha, 245, 158, 11)); // Energia runica
             }
             canvas.drawCircle(t.x, t.y, game.ball.r * ratio * 0.95f, paintFill);
         }
     }
 
-    private void drawBall(Canvas canvas) {
+    private void drawRunicOrb(Canvas canvas) {
         canvas.save();
         canvas.translate(game.ball.x, game.ball.y);
         canvas.scale(ballSquashX, ballSquashY);
 
-        // Outer Glow Corona
+        // Alone magico
         paintGlow.setStyle(Paint.Style.FILL);
         if (game.burn) {
             paintGlow.setShader(new RadialGradient(0f, 0f, game.ball.r * 1.8f,
-                    0xFFFFAA00, 0x00FF4400, Shader.TileMode.CLAMP));
+                    0xFFFF5500, 0x00FF0000, Shader.TileMode.CLAMP));
         } else {
             paintGlow.setShader(new RadialGradient(0f, 0f, game.ball.r * 1.8f,
-                    0xFF38BDF8, 0x000284C7, Shader.TileMode.CLAMP));
+                    0xFFF59E0B, 0x00D97706, Shader.TileMode.CLAMP));
         }
         canvas.drawCircle(0f, 0f, game.ball.r * 1.8f, paintGlow);
         paintGlow.setShader(null);
 
-        // Core Fusion Sphere
+        // Corpo sfera di pietra e ferro runico
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(game.burn ? 0xFFFFD700 : 0xFFFFFFFF);
+        paintFill.setColor(game.burn ? 0xFFFFD700 : 0xFFE7E5E4);
         canvas.drawCircle(0f, 0f, game.ball.r, paintFill);
 
-        // Inner Specular Glint
-        paintFill.setColor(0xFFFFFFFF);
-        canvas.drawCircle(-game.ball.r * 0.3f, -game.ball.r * 0.3f, game.ball.r * 0.35f, paintFill);
+        // Runa incisa al centro
+        paintStroke.setStyle(Paint.Style.STROKE);
+        paintStroke.setStrokeWidth(1.2f);
+        paintStroke.setColor(game.burn ? 0xFFDC2626 : 0xFFD97706);
+        canvas.drawLine(0f, -game.ball.r * 0.6f, 0f, game.ball.r * 0.6f, paintStroke);
+        canvas.drawLine(0f, -game.ball.r * 0.2f, game.ball.r * 0.5f, -game.ball.r * 0.5f, paintStroke);
+        canvas.drawLine(0f, 0f, game.ball.r * 0.5f, game.ball.r * 0.3f, paintStroke);
 
         canvas.restore();
 
-        // 3D Revolving Cargo Capsules Orbiting The Ball
+        // Pepite grezze e lingotti forgiati orbitanti in 3D attorno alla sfera
         if (game.cargo() > 0) {
             int total = game.cargo();
             for (int i = 0; i < total; i++) {
                 double a = i * 2.0 * Math.PI / total + game.elapsed * 2.2;
                 float px = game.ball.x + (float) Math.cos(a) * 18f;
-                float py = game.ball.y + (float) Math.sin(a) * 11f; // Elliptical 3D tilt
+                float py = game.ball.y + (float) Math.sin(a) * 11f;
 
                 paintFill.setStyle(Paint.Style.FILL);
                 if (i < game.ball.metal) {
-                    // Refined Iron Ingot: Gleaming Golden Bar
+                    // Lingotto di ferro battuto lucido
                     paintFill.setColor(0xFFFBBF24);
                     canvas.drawRect(px - 4f, py - 3f, px + 4f, py + 3f, paintFill);
                     paintStroke.setStyle(Paint.Style.STROKE);
@@ -1073,21 +1061,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                     paintStroke.setColor(0xFFFFFBEB);
                     canvas.drawRect(px - 4f, py - 3f, px + 4f, py + 3f, paintStroke);
                 } else {
-                    // Raw Ore Chunk: Bronze Rock Crystal
-                    paintFill.setColor(0xFFB45309);
+                    // Minerale di roccia grezza
+                    paintFill.setColor(0xFF78350F);
                     canvas.drawCircle(px, py, 3.5f, paintFill);
                     paintStroke.setStyle(Paint.Style.STROKE);
                     paintStroke.setStrokeWidth(1f);
-                    paintStroke.setColor(0xFFFCD34D);
+                    paintStroke.setColor(0xFFFDE68A);
                     canvas.drawCircle(px, py, 3.5f, paintStroke);
                 }
             }
 
-            // Cargo Readout
             paintText.setTextSize(11f);
-            paintText.setColor(0xFFFDE68A);
+            paintText.setColor(0xFFFEF3C7);
             paintText.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText(game.ball.ore + " Min · " + game.ball.metal + " Fe", game.ball.x, game.ball.y - 20f, paintText);
+            canvas.drawText(game.ball.ore + " Min · " + game.ball.metal + " Ferro", game.ball.x, game.ball.y - 20f, paintText);
         }
     }
 
@@ -1105,83 +1092,81 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private void drawEffects(Canvas canvas) {
         for (Game.Effect eff : game.effects) {
             int alpha = (int) (255 * Game.clamp(eff.life, 0f, 1f));
-            // Shadow
             paintText.setColor(Color.argb(alpha / 2, 0, 0, 0));
             paintText.setTextSize(14f);
             paintText.setTextAlign(Paint.Align.CENTER);
             canvas.drawText(eff.text, eff.x + 1.5f, eff.y + 1.5f, paintText);
-            // Main Text
+
             paintText.setColor((eff.color & 0x00FFFFFF) | (alpha << 24));
             canvas.drawText(eff.text, eff.x, eff.y, paintText);
         }
     }
 
     private void drawHUD(Canvas canvas) {
-        // Top Aerospace Visor Dashboard
+        // Trave portante in legno e ferro
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setShader(new LinearGradient(0f, 0f, 0f, 65f, 0xFA0B1324, 0xEE111C33, Shader.TileMode.CLAMP));
+        paintFill.setShader(new LinearGradient(0f, 0f, 0f, 65f, 0xFA24150F, 0xEE140C09, Shader.TileMode.CLAMP));
         canvas.drawRect(0f, 0f, Game.W, 65f, paintFill);
         paintFill.setShader(null);
 
         paintStroke.setStyle(Paint.Style.STROKE);
-        paintStroke.setColor(0xFF1E293B);
+        paintStroke.setColor(0xFF573E30);
         paintStroke.setStrokeWidth(1.5f);
         canvas.drawLine(0f, 65f, Game.W, 65f, paintStroke);
 
-        // Wave Badge
+        // Stemma Ondata
         tempRect.set(14f, 12f, 115f, 54f);
-        paintFill.setColor(0xFF1E293B);
+        paintFill.setColor(0xFF382214);
         canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
-        paintStroke.setColor(0xFF475569);
+        paintStroke.setColor(0xFF92400E);
         canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
 
-        paintText.setTextSize(11f);
-        paintText.setColor(0xFF94A3B8);
+        paintText.setTextSize(10f);
+        paintText.setColor(0xFFD6D3D1);
         paintText.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("MISSIONE", tempRect.centerX(), 28f, paintText);
+        canvas.drawText("ASSEDIO", tempRect.centerX(), 28f, paintText);
         paintText.setTextSize(14f);
         paintText.setColor(0xFFFBBF24);
         canvas.drawText("Ondata " + game.wave + "/5", tempRect.centerX(), 46f, paintText);
 
-        // Shield Energy Cells
+        // Cuori / Stemmi Integrità della Rocca
         float startX = 130f;
         for (int i = 0; i < game.maxHp; i++) {
             float cx = startX + i * 16f;
             boolean active = i < game.hp;
-            paintFill.setColor(active ? (game.hp <= 2 ? 0xFFEF4444 : 0xFF10B981) : 0xFF334155);
-            canvas.drawRoundRect(cx, 32f, cx + 12f, 52f, 2f, 2f, paintFill);
+            paintFill.setColor(active ? 0xFFDC2626 : 0xFF44403C);
+            canvas.drawCircle(cx + 6f, 42f, 5.5f, paintFill);
             if (active) {
-                paintStroke.setColor(0xFFD1FAE5);
-                paintStroke.setStrokeWidth(1f);
-                canvas.drawRoundRect(cx, 32f, cx + 12f, 52f, 2f, 2f, paintStroke);
+                paintFill.setColor(0xFFFECACA);
+                canvas.drawCircle(cx + 5f, 40f, 2f, paintFill);
             }
         }
         paintText.setTextSize(10f);
-        paintText.setColor(0xFF6EE7B7);
+        paintText.setColor(0xFFE2E8F0);
         paintText.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("INTEGRITÀ SCUDI", startX, 26f, paintText);
+        canvas.drawText("INTEGRITÀ ROCCA", startX, 26f, paintText);
 
-        // Resources Counters
+        // Contatori risorse
         paintText.setTextAlign(Paint.Align.LEFT);
         paintText.setTextSize(13f);
         paintText.setColor(0xFFFBBF24);
-        canvas.drawText("Fe Disp: " + game.iron, 245f, 28f, paintText);
-        paintText.setColor(0xFF38BDF8);
+        canvas.drawText("Ferro: " + game.iron, 245f, 28f, paintText);
+        paintText.setColor(0xFF6EE7B7);
         canvas.drawText("Consegnati: " + game.delivered + "/" + game.target, 245f, 48f, paintText);
 
-        // Digital Countdown Timer
+        // Timer assedio
         int sec = (int) Math.max(0, game.duration - game.time);
         paintText.setTextSize(17f);
-        paintText.setColor(sec <= 5 ? 0xFFEF4444 : 0xFFE2E8F0);
+        paintText.setColor(sec <= 5 ? 0xFFEF4444 : 0xFFFDE68A);
         paintText.setTextAlign(Paint.Align.RIGHT);
         canvas.drawText(sec + "s", 460f, 38f, paintText);
 
-        // Pause Button
-        paintFill.setColor(0xFF1E293B);
+        // Tasto Pausa
+        paintFill.setColor(0xFF382214);
         canvas.drawRoundRect(btnPause, 6f, 6f, paintFill);
-        paintStroke.setColor(0xFF475569);
+        paintStroke.setColor(0xFF92400E);
         canvas.drawRoundRect(btnPause, 6f, 6f, paintStroke);
-        paintText.setColor(0xFFF8FAFC);
+        paintText.setColor(0xFFFEF3C7);
         paintText.setTextSize(14f);
         paintText.setTextAlign(Paint.Align.CENTER);
         canvas.drawText("❚❚", btnPause.centerX(), btnPause.centerY() + 5f, paintText);
@@ -1190,83 +1175,79 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         // BARRA INFERIORE COMANDI AD ALTA ERGONOMIA
         // ==========================================
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setShader(new LinearGradient(0f, 835f, 0f, 960f, 0xEE0B1324, 0xFF050812, Shader.TileMode.CLAMP));
+        paintFill.setShader(new LinearGradient(0f, 835f, 0f, 960f, 0xEE1E110A, 0xFF120A05, Shader.TileMode.CLAMP));
         canvas.drawRect(0f, 835f, Game.W, 960f, paintFill);
         paintFill.setShader(null);
 
-        paintStroke.setColor(0xFF1E293B);
+        paintStroke.setColor(0xFF573E30);
         paintStroke.setStrokeWidth(1.5f);
         canvas.drawLine(0f, 835f, Game.W, 835f, paintStroke);
 
         if ("wave".equals(game.phase)) {
-            // Button Fonderia
-            drawTactileButton(canvas, btnForge,
-                    game.forgeOpen ? "FONDERIA: ON" : "FONDERIA: OFF",
-                    game.forgeOpen ? "Trasforma Minerale" : "Muro Riflettente",
-                    game.forgeOpen ? 0xFFEA580C : 0xFF334155,
-                    game.forgeOpen ? 0xFFFFD7A0 : 0xFF94A3B8);
+            // Fucina
+            drawFantasyButton(canvas, btnForge,
+                    game.forgeOpen ? "FUCINA: APERTA" : "FUCINA: CHIUSA",
+                    game.forgeOpen ? "Fonde il Minerale" : "Muro Riflettente",
+                    game.forgeOpen ? 0xFFC2410C : 0xFF44403C,
+                    game.forgeOpen ? 0xFFFFEDD5 : 0xFFD6D3D1);
 
-            // Button Carico
-            drawTactileButton(canvas, btnBurn,
+            // Carico
+            drawFantasyButton(canvas, btnBurn,
                     game.burn ? "CARICO: ARMATO" : "CARICO: SALVO",
-                    game.burn ? "Danno x3 (Consuma)" : "Per il Deposito",
-                    game.burn ? 0xFFDC2626 : 0xFF0D9488,
-                    game.burn ? 0xFFFECACA : 0xFFCCFBF1);
+                    game.burn ? "Danno x3 (Consuma)" : "Per il Forziere",
+                    game.burn ? 0xFFB91C1C : 0xFF047857,
+                    game.burn ? 0xFFFEE2E2 : 0xFFD1FAE5);
 
-            // Button Richiama Sfera
+            // Richiama Sfera
             boolean ready = game.recall <= 0f && !game.ball.held;
             String recallLbl = game.recall > 0f ? "RICHIAMO (" + (int) Math.ceil(game.recall) + "s)" : "RICHIAMA SFERA";
-            drawTactileButton(canvas, btnRecall,
+            drawFantasyButton(canvas, btnRecall,
                     recallLbl,
-                    "Salva & Centra Sfera",
-                    ready ? 0xFF0284C7 : 0xFF1E293B,
-                    ready ? 0xFFE0F2FE : 0xFF64748B);
+                    "Salva sullo Scudo",
+                    ready ? 0xFFD97706 : 0xFF292524,
+                    ready ? 0xFFFFFBEB : 0xFF78716C);
 
         } else if ("build".equals(game.phase)) {
-            // Button +Sponda
+            // Mura
             boolean selWall = "wall".equals(placingType);
             boolean canWall = game.iron >= Game.COST_WALL;
-            drawTactileButton(canvas, btnWall,
-                    "+ SPONDA (3 Fe)",
-                    selWall ? "▶ POSIZIONA..." : "Muro difensivo",
-                    selWall ? 0xFF10B981 : (canWall ? 0xFF065F46 : 0xFF1E293B),
-                    canWall ? 0xFFD1FAE5 : 0xFF64748B);
+            drawFantasyButton(canvas, btnWall,
+                    "+ MURA (3 Fe)",
+                    selWall ? "▶ POSIZIONA..." : "Mura in pietra",
+                    selWall ? 0xFF047857 : (canWall ? 0xFF065F46 : 0xFF292524),
+                    canWall ? 0xFFD1FAE5 : 0xFF78716C);
 
-            // Button +Sentinella
+            // Balista
             boolean selTurret = "turret".equals(placingType);
             boolean canTurret = game.iron >= Game.COST_TURRET;
-            drawTactileButton(canvas, btnTurret,
-                    "+ SENTINELLA (7 Fe)",
-                    selTurret ? "▶ POSIZIONA..." : "Torretta laser auto",
-                    selTurret ? 0xFF38BDF8 : (canTurret ? 0xFF075985 : 0xFF1E293B),
-                    canTurret ? 0xFFE0F2FE : 0xFF64748B);
+            drawFantasyButton(canvas, btnTurret,
+                    "+ BALISTA (7 Fe)",
+                    selTurret ? "▶ POSIZIONA..." : "Dardi automatici",
+                    selTurret ? 0xFFD97706 : (canTurret ? 0xFF92400E : 0xFF292524),
+                    canTurret ? 0xFFFEF3C7 : 0xFF78716C);
 
-            // Button Avvia Ondata
-            drawTactileButton(canvas, btnStartWave,
-                    "AVVIA ONDATA ➔",
-                    "Difendi il settore",
-                    0xFFD97706,
+            // Avvia Ondata
+            drawFantasyButton(canvas, btnStartWave,
+                    "SUONA L'ALLARME ➔",
+                    "Affronta l'ondata",
+                    0xFFB91C1C,
                     0xFFFFFBEB);
         }
     }
 
-    private void drawTactileButton(Canvas canvas, RectF r, String title, String sub, int bgClr, int textClr) {
-        // Button Body
+    private void drawFantasyButton(Canvas canvas, RectF r, String title, String sub, int bgClr, int textClr) {
         paintFill.setStyle(Paint.Style.FILL);
         paintFill.setColor(bgClr);
         canvas.drawRoundRect(r, 8f, 8f, paintFill);
 
-        // Highlight top rim
         paintStroke.setStyle(Paint.Style.STROKE);
         paintStroke.setStrokeWidth(1.5f);
         paintStroke.setColor(0x40FFFFFF);
         canvas.drawLine(r.left + 8f, r.top + 1f, r.right - 8f, r.top + 1f, paintStroke);
 
-        // Border
         paintStroke.setColor(textClr);
         canvas.drawRoundRect(r, 8f, 8f, paintStroke);
 
-        // Text
         paintText.setTextAlign(Paint.Align.CENTER);
         paintText.setTextSize(13f);
         paintText.setColor(textClr);
@@ -1278,40 +1259,39 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawUpgradeOverlay(Canvas canvas) {
-        paintFill.setColor(0xEE050B14);
+        paintFill.setColor(0xF0140C08);
         canvas.drawRect(0f, 0f, Game.W, Game.H, paintFill);
 
         paintText.setTextSize(24f);
         paintText.setColor(0xFFFBBF24);
         paintText.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("ONDATA COMPLETATA", Game.W / 2f, 130f, paintText);
+        canvas.drawText("ONDATA RESPINTA!", Game.W / 2f, 130f, paintText);
 
         paintText.setTextSize(14f);
-        paintText.setColor(0xFF94A3B8);
-        canvas.drawText("Scegli un modulo tecnologico per la spedizione:", Game.W / 2f, 165f, paintText);
+        paintText.setColor(0xFFD6D3D1);
+        canvas.drawText("I mastri fabbri nanici offrono un'artefatto:", Game.W / 2f, 165f, paintText);
 
-        // Card 1
-        drawUpgradeCard(canvas, cardUpgrade1, "📦 STIVA MAGNETICA RINFORZATA",
-                "+2 Capienza Totale Carico",
-                "Permette di raccogliere e fondere più minerale prima del deposito.",
+        // Schede talenti pergamena
+        drawParchmentCard(canvas, cardUpgrade1, "📦 BISACCIA DA MINIERA RINFORZATA",
+                "+2 Capienza Carico Sfera",
+                "Permette di trasportare e fondere più minerale grezzo.",
                 0xFFF59E0B);
 
-        // Card 2
-        drawUpgradeCard(canvas, cardUpgrade2, "🛡️ SCAFO RACCHETTA MAGGIORATO",
-                "+20px Lunghezza & +1 Integrità Scudo",
-                "Aumenta la copertura della linea difensiva e ripara i danni subiti.",
+        drawParchmentCard(canvas, cardUpgrade2, "🛡️ SCUDO TORRE MAGGIORATO",
+                "+20px Larghezza Scudo & +1 Cuore",
+                "Allarga la difesa della rocca e ripara i danni subiti.",
                 0xFF10B981);
 
-        // Card 3
-        drawUpgradeCard(canvas, cardUpgrade3, "⚡ NUCLEO CINETICO AVANZATO",
+        drawParchmentCard(canvas, cardUpgrade3, "⚡ INCANTO RUNICO PESANTE",
                 "+1 Danno Base Sfera",
-                "Ogni impatto contro i droni nemici infligge danni distruttivi maggiori.",
-                0xFF38BDF8);
+                "La sfera runica distrugge più rapidamente i goblin invasori.",
+                0xFFEF4444);
     }
 
-    private void drawUpgradeCard(Canvas canvas, RectF r, String title, String bonus, String desc, int accentClr) {
+    private void drawParchmentCard(Canvas canvas, RectF r, String title, String bonus, String desc, int accentClr) {
+        // Carta pergamena scura
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(0xFF0F172A);
+        paintFill.setColor(0xFF2E1C12);
         canvas.drawRoundRect(r, 10f, 10f, paintFill);
 
         paintStroke.setStyle(Paint.Style.STROKE);
@@ -1320,21 +1300,21 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.drawRoundRect(r, 10f, 10f, paintStroke);
 
         paintText.setTextAlign(Paint.Align.CENTER);
-        paintText.setTextSize(16f);
+        paintText.setTextSize(15f);
         paintText.setColor(accentClr);
         canvas.drawText(title, r.centerX(), r.top + 45f, paintText);
 
         paintText.setTextSize(14f);
-        paintText.setColor(0xFFF8FAFC);
+        paintText.setColor(0xFFFEF3C7);
         canvas.drawText(bonus, r.centerX(), r.top + 80f, paintText);
 
         paintText.setTextSize(12f);
-        paintText.setColor(0xFF94A3B8);
+        paintText.setColor(0xFFD6D3D1);
         canvas.drawText(desc, r.centerX(), r.top + 115f, paintText);
     }
 
     private void drawResultOverlay(Canvas canvas) {
-        paintFill.setColor(0xF0050812);
+        paintFill.setColor(0xF0140C08);
         canvas.drawRect(0f, 0f, Game.W, Game.H, paintFill);
 
         boolean won = "won".equals(game.phase);
@@ -1343,37 +1323,37 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintText.setTextAlign(Paint.Align.CENTER);
         paintText.setTextSize(32f);
         paintText.setColor(won ? 0xFF10B981 : shortIron ? 0xFFF59E0B : 0xFFEF4444);
-        canvas.drawText(won ? "SETTORE DIFESO!" : shortIron ? "CARGO INSUFFICIENTE" : "NUCLEO DISTRUTTO", Game.W / 2f, 250f, paintText);
+        canvas.drawText(won ? "ROCCA SALVATA!" : shortIron ? "FERRO INSUFFICIENTE" : "LA ROCCA È CADUTA", Game.W / 2f, 250f, paintText);
 
         paintText.setTextSize(15f);
-        paintText.setColor(0xFFE2E8F0);
-        String desc = won ? "Hai difeso il settore e consegnato " + game.delivered + "/" + game.target + " Fe!"
-                : shortIron ? "Sopravvissuto alle 5 ondate, ma servivano " + game.target + " Fe (consegnati: " + game.delivered + ")."
-                : "I droni nemici hanno abbattuto tutte le difese del settore.";
+        paintText.setColor(0xFFFEF3C7);
+        String desc = won ? "Hai difeso le miniere e consegnato " + game.delivered + "/" + game.target + " Fe al forziere!"
+                : shortIron ? "Sopravvissuto alle 5 ondate, ma servivano " + game.target + " Fe (raccolti: " + game.delivered + ")."
+                : "I goblin hanno sfondato la palizzata nanica.";
         canvas.drawText(desc, Game.W / 2f, 295f, paintText);
 
-        // Mission Stats Panel
+        // Pannello pergamena resoconto
         tempRect.set(60f, 340f, Game.W - 60f, 520f);
-        paintFill.setColor(0xFF0F172A);
+        paintFill.setColor(0xFF2E1C12);
         canvas.drawRoundRect(tempRect, 8f, 8f, paintFill);
-        paintStroke.setColor(0xFF334155);
+        paintStroke.setColor(0xFF78350F);
         paintStroke.setStrokeWidth(1.5f);
         canvas.drawRoundRect(tempRect, 8f, 8f, paintStroke);
 
         paintText.setTextSize(14f);
-        paintText.setColor(0xFF38BDF8);
-        canvas.drawText("RAPPORTO MISSIONE SPEDIZIONE", Game.W / 2f, 375f, paintText);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("RESOCONTO DELLA BATTAGLIA", Game.W / 2f, 375f, paintText);
 
-        paintText.setColor(0xFFCBD5E1);
+        paintText.setColor(0xFFE7E5E4);
         canvas.drawText("Minerale grezzo estratto: " + game.stats.mined, Game.W / 2f, 410f, paintText);
-        canvas.drawText("Ferro raffinato nella fonderia: " + game.stats.smelted, Game.W / 2f, 435f, paintText);
-        canvas.drawText("Droni ostili abbattuti: " + game.kills, Game.W / 2f, 460f, paintText);
-        canvas.drawText("Strutture difensive edificate: " + game.stats.built, Game.W / 2f, 485f, paintText);
+        canvas.drawText("Ferro forgiato nella fucina: " + game.stats.smelted, Game.W / 2f, 435f, paintText);
+        canvas.drawText("Goblin e mostri abbattuti: " + game.kills, Game.W / 2f, 460f, paintText);
+        canvas.drawText("Mura e baliste edificate: " + game.stats.built, Game.W / 2f, 485f, paintText);
 
-        // Restart Button
-        paintFill.setColor(0xFF0284C7);
+        // Tasto Rigioca
+        paintFill.setColor(0xFFB91C1C);
         canvas.drawRoundRect(btnRestart, 10f, 10f, paintFill);
-        paintStroke.setColor(0xFF38BDF8);
+        paintStroke.setColor(0xFFFCA5A5);
         canvas.drawRoundRect(btnRestart, 10f, 10f, paintStroke);
         paintText.setTextSize(16f);
         paintText.setColor(0xFFFFFFFF);
@@ -1381,25 +1361,25 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawPauseOverlay(Canvas canvas) {
-        paintFill.setColor(0xD0050812);
+        paintFill.setColor(0xD0140C08);
         canvas.drawRect(0f, 0f, Game.W, Game.H, paintFill);
 
         paintText.setTextAlign(Paint.Align.CENTER);
         paintText.setTextSize(28f);
         paintText.setColor(0xFFFBBF24);
-        canvas.drawText("SIMULAZIONE IN PAUSA", Game.W / 2f, 380f, paintText);
+        canvas.drawText("BATTAGLIA SOSPESA", Game.W / 2f, 380f, paintText);
 
-        paintFill.setColor(0xFF0284C7);
+        paintFill.setColor(0xFF047857);
         canvas.drawRoundRect(btnResume, 8f, 8f, paintFill);
-        paintStroke.setColor(0xFF38BDF8);
+        paintStroke.setColor(0xFF6EE7B7);
         canvas.drawRoundRect(btnResume, 8f, 8f, paintStroke);
         paintText.setTextSize(16f);
         paintText.setColor(0xFFFFFFFF);
         canvas.drawText("RIPRENDI", btnResume.centerX(), btnResume.centerY() + 6f, paintText);
 
-        paintFill.setColor(0xFFDC2626);
+        paintFill.setColor(0xFFB91C1C);
         canvas.drawRoundRect(btnRestart, 8f, 8f, paintFill);
-        paintStroke.setColor(0xFFF87171);
+        paintStroke.setColor(0xFFFCA5A5);
         canvas.drawRoundRect(btnRestart, 8f, 8f, paintStroke);
         paintText.setTextSize(16f);
         paintText.setColor(0xFFFFFFFF);

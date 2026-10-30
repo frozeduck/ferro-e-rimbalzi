@@ -1,30 +1,30 @@
-# Ferro e Rimbalzi (Android APK · Verticale)
+# Ferro e Rimbalzi (Android APK · Verticale · Fantasy Nanico)
 
-Gioco d'azione, logica e difesa del nucleo nativo per **Android**, progettato da zero per essere giocato in **orientamento verticale (portrait)** su smartphone con una sola mano.
+Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, progettato da zero per essere giocato in **orientamento verticale (portrait)** su smartphone con una sola mano.
 
-**[Scarica la Release v0.4.0 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.4.0)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
+**[Scarica la Release v0.5.0 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.5.0)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
 
 ---
 
-## Panoramica del Gioco
+## Panoramica del Gioco (Ambientazione Fantasy Nanico)
 
-*Ferro e Rimbalzi* unisce il dinamismo del Breakout / flipper con un'economia tattica di estrazione, fusione e difesa a ondate:
+*Ferro e Rimbalzi* unisce il dinamismo del Breakout / flipper con un'economia tattica di estrazione mineraria, forgiatura e difesa dall'assedio goblin:
 
-1. **Estrazione mineraria (Settore Superiore)**:
-   * 3 giacimenti minerari attivi nella parte alta dell'arena rilasciano minerale grezzo quando colpiti dalla sfera.
-2. **Fusione e Deposito (Settore Mediano)**:
-   * **Fonderia**: con il comando dedicato puoi aprirla o chiuderla. Quando è aperta, la sfera che la attraversa trasforma istantaneamente tutto il minerale in **ferro raffinato**. Quando è chiusa, fa da sponda solida riflettente.
-   * **Deposito**: quando la sfera carica di ferro entra nel deposito, incassa il ferro per acquistare difese e far progredire la missione.
-3. **Difesa e Minaccia nemica**:
-   * Ondate di insetti corazzati e ladri veloci scendono verso il fondo. Se un nemico vivo tocca la **linea di difesa**, fa breccia togliendo 1 cuore al nucleo.
-   * **Carico Armato**: attiva questa modalità per bruciare un'unità di carico all'impatto con un nemico, triplicando i danni (+4 danno extra con ferro, +2 con minerale)!
-   * **Richiamo di Emergenza**: richiama immediatamente la sfera alla racchetta per mettere in salvo il carico accumulato (tempo di ricarica: 12 secondi).
-4. **Cantiere e Talenti fra le Ondate**:
-   * Sposta liberamente gli edifici con il tocco per creare percorsi ottimali per la sfera.
-   * Spendi il ferro incassato per erigere nuove **Sponde (3 Fe)** o **Torrette Sentinella (7 Fe)** che sparano laser automatici.
-   * Scegli tra 3 talenti ad ogni ondata superata: **Stiva Rinforzata** (+2 capienza), **Racchetta Maggiorata** (+20px e +1 cuore), **Impatto Cinetico** (+1 danno base).
+1. **Miniera di Ferro e Roccia (Settore Superiore)**:
+   * 3 giacimenti montani nella roccia viva rilasciano minerale grezzo e schegge quando percossi dalla sfera runica.
+2. **Forgia e Forziere Reale (Settore Mediano)**:
+   * **Grande Fucina Nanica**: puoi aprirla o chiuderla. Aperta, accoglie la sfera nel crogiolo e fonde istantaneamente il minerale in **ferro raffinato**. Chiusa, il portone borchiato funge da sponda riflettente.
+   * **Forziere del Regno**: quando la sfera carica di ferro entra nel forziere, incassa il ferro per erigere difese e finanziare la spedizione.
+3. **Assedio dei Goblin e Minaccia alle Barricate**:
+   * Orde di goblin invasori con elmi cornuti e ladri koboldi furtivi scendono lungo la galleria. Se toccano la **palizzata**, sottraggono integrità alla rocca nanica.
+   * **Carico Armato**: infiamma la sfera con il fuoco del drago, sacrificando ferro o minerale per triplicare i danni all'impatto con i mostri!
+   * **Richiamo dello Scudo**: richiama tempestivamente la sfera sullo scudo torre per mettere in salvo il carico (ricarica: 12 secondi).
+4. **Cantiere dei Fabbri e Artefatti Runici**:
+   * Trascina le strutture per creare percorsi di rimbalzo micidiali.
+   * Spendi il ferro incassato per erigere **Mura in Pietra (3 Fe)** o **Baliste a Ripetizione (7 Fe)** che scagliano dardi infuocati automatici.
+   * Scegli tra 3 artefatti runici ad ogni ondata respinta: **Bisaccia Rinforzata** (+2 capienza), **Scudo Torre Maggiorato** (+20px e +1 cuore), **Incanto Runico** (+1 danno).
 5. **Obiettivo**:
-   * Resistere a 5 ondate e consegnare almeno **14 unità di ferro** al deposito.
+   * Resistere a 5 ondate di assedio e consegnare almeno **14 lingotti di ferro** al forziere reale.
 
 ---
 
@@ -40,12 +40,12 @@ Gioco d'azione, logica e difesa del nucleo nativo per **Android**, progettato da
 ## Download e Installazione
 
 Il pacchetto APK firmato pronto all'uso:
-* 📦 **APK**: `downloads/ferro-e-rimbalzi-0.4.0-debug.apk`
-* 🔒 **Checksum**: `downloads/ferro-e-rimbalzi-0.4.0-debug.apk.sha256`
+* 📦 **APK**: `downloads/ferro-e-rimbalzi-0.5.0-debug.apk`
+* 🔒 **Checksum**: `downloads/ferro-e-rimbalzi-0.5.0-debug.apk.sha256`
 
 Per installarlo tramite computer o adb:
 ```bash
-adb install downloads/ferro-e-rimbalzi-0.4.0-debug.apk
+adb install downloads/ferro-e-rimbalzi-0.5.0-debug.apk
 ```
 
 ---
