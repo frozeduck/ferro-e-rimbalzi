@@ -1312,17 +1312,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintText.setColor(0xFFD6D3D1);
         canvas.drawText("I mastri fabbri nanici offrono un'artefatto:", Game.W / 2f, midY - 280f, paintText);
 
-        drawParchmentCard(canvas, cardUpgrade1, "📦 BISACCIA DA MINIERA RINFORZATA",
+        drawParchmentCard(canvas, cardUpgrade1, "BISACCIA DA MINIERA RINFORZATA",
                 "+2 Capienza Carico Sfera",
                 "Permette di trasportare e fondere più minerale grezzo.",
                 0xFFF59E0B);
 
-        drawParchmentCard(canvas, cardUpgrade2, "🛡️ SCUDO TORRE MAGGIORATO",
+        drawParchmentCard(canvas, cardUpgrade2, "SCUDO TORRE MAGGIORATO",
                 "+20px Larghezza Scudo & +1 Cuore",
                 "Allarga la difesa della rocca e ripara i danni subiti.",
                 0xFF10B981);
 
-        drawParchmentCard(canvas, cardUpgrade3, "⚡ INCANTO RUNICO PESANTE",
+        drawParchmentCard(canvas, cardUpgrade3, "INCANTO RUNICO PESANTE",
                 "+1 Danno Base Sfera",
                 "La sfera runica distrugge più rapidamente i goblin invasori.",
                 0xFFEF4444);

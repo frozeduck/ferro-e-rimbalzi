@@ -40,8 +40,8 @@ Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, proge
 ## Download e Installazione
 
 Il pacchetto APK firmato pronto all'uso:
-* 📦 **APK**: `downloads/ferro-e-rimbalzi-0.9.1-debug.apk`
-* 🔒 **Checksum**: `downloads/ferro-e-rimbalzi-0.9.1-debug.apk.sha256`
+* **APK**: `downloads/ferro-e-rimbalzi-0.9.1-debug.apk`
+* **Checksum**: `downloads/ferro-e-rimbalzi-0.9.1-debug.apk.sha256`
 
 Per installarlo tramite computer o adb:
 ```bash
