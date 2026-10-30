@@ -17,6 +17,7 @@ import android.view.SurfaceView;
 public class GameView extends SurfaceView implements SurfaceHolder.Callback, Runnable {
     private Thread gameThread;
     private volatile boolean running = false;
+    private volatile boolean surfaceReady = false;
     private final SurfaceHolder holder;
 
     public Game game;
@@ -160,6 +161,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        surfaceReady = true;
         resume();
     }
 
@@ -170,6 +172,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
+        surfaceReady = false;
         pause();
     }
 
@@ -246,107 +249,121 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     @Override
     public void run() {
         while (running) {
-            long now = System.nanoTime();
-            float dt = (now - lastTimeNs) / 1_000_000_000f;
-            lastTimeNs = now;
-            if (dt > 0.05f) dt = 0.05f;
+            if (!surfaceReady) {
+                try {
+                    Thread.sleep(16);
+                } catch (InterruptedException ignored) {}
+                continue;
+            }
 
-            if (!paused && !showTutorial) {
-                // Aggiorna pulviscolo e faville ambientali
-                for (Sparkle s : sparkles) {
-                    s.y -= s.speed * dt;
-                    if (s.y < 65f) {
-                        s.y = virtualH;
-                        s.x = (float) (Math.random() * Game.W);
-                    }
-                }
+            try {
+                long now = System.nanoTime();
+                float dt = (now - lastTimeNs) / 1_000_000_000f;
+                lastTimeNs = now;
+                if (dt > 0.05f) dt = 0.05f;
 
-                // Aggiorna particelle
-                for (Particle p : particles) {
-                    if (!p.active) continue;
-                    p.life -= dt;
-                    if (p.life <= 0f) {
-                        p.active = false;
-                        continue;
-                    }
-                    p.x += p.vx * dt;
-                    p.y += p.vy * dt;
-                    p.vx *= 0.95f;
-                    p.vy *= 0.95f;
-                }
-
-                // Faville continue dalla forgia attiva
-                if (game.forgeOpen && "wave".equals(game.phase)) {
-                    for (Game.Building b : game.buildings) {
-                        if ("forge".equals(b.type) && Math.random() < 0.35) {
-                            spawnParticles(b.x + (float) Math.random() * b.w, b.y + 6f, 1, 0xFFFF8A00, 1);
+                if (!paused && !showTutorial) {
+                    // Aggiorna pulviscolo e faville ambientali
+                    for (Sparkle s : sparkles) {
+                        s.y -= s.speed * dt;
+                        if (s.y < 65f) {
+                            s.y = virtualH;
+                            s.x = (float) (Math.random() * Game.W);
                         }
                     }
-                }
 
-                // Riacquisto forma della sfera
-                ballSquashX += (1f - ballSquashX) * 12f * dt;
-                ballSquashY += (1f - ballSquashY) * 12f * dt;
-
-                // Simulazione di gioco
-                game.step(dt);
-
-                // Feedback audio ed effetti
-                if (game.hp < lastHp) {
-                    addTrauma(0.55f);
-                    AudioHelper.playWarhorn();
-                    lastHp = game.hp;
-                } else if (game.hp > lastHp) {
-                    lastHp = game.hp;
-                }
-
-                if (game.kills > lastKills) {
-                    addTrauma(0.22f);
-                    AudioHelper.playGoblinHit();
-                    lastKills = game.kills;
-                }
-
-                int statsCount = game.stats.mined + game.stats.smelted + game.delivered;
-                if (statsCount > lastStatsCount) {
-                    if (game.stats.smelted > 0 && statsCount == lastStatsCount + 1 && game.ball.metal > 0) {
-                        AudioHelper.playForgeFire();
-                        addTrauma(0.12f);
-                    } else if (game.delivered > 0 && statsCount == lastStatsCount + 1 && game.ball.metal == 0) {
-                        AudioHelper.playCoins();
-                        addTrauma(0.18f);
-                    } else {
-                        AudioHelper.playAnvil();
+                    // Aggiorna particelle
+                    for (Particle p : particles) {
+                        if (!p.active) continue;
+                        p.life -= dt;
+                        if (p.life <= 0f) {
+                            p.active = false;
+                            continue;
+                        }
+                        p.x += p.vx * dt;
+                        p.y += p.vy * dt;
+                        p.vx *= 0.95f;
+                        p.vy *= 0.95f;
                     }
-                    lastStatsCount = statsCount;
-                }
 
-                // Colpi di balista sparati
-                if (!game.shots.isEmpty() && Math.random() < 0.35) {
-                    AudioHelper.playBallista();
-                }
-            }
+                    // Faville continue dalla forgia attiva
+                    if (game.forgeOpen && "wave".equals(game.phase)) {
+                        for (Game.Building b : game.buildings) {
+                            if ("forge".equals(b.type) && Math.random() < 0.35) {
+                                spawnParticles(b.x + (float) Math.random() * b.w, b.y + 6f, 1, 0xFFFF8A00, 1);
+                            }
+                        }
+                    }
 
-            Canvas canvas = null;
-            try {
-                canvas = holder.lockCanvas();
-                if (canvas != null) {
-                    synchronized (holder) {
-                        drawGame(canvas, dt);
+                    // Riacquisto forma della sfera
+                    ballSquashX += (1f - ballSquashX) * 12f * dt;
+                    ballSquashY += (1f - ballSquashY) * 12f * dt;
+
+                    // Simulazione di gioco
+                    game.step(dt);
+
+                    // Feedback audio ed effetti
+                    if (game.hp < lastHp) {
+                        addTrauma(0.55f);
+                        AudioHelper.playWarhorn();
+                        lastHp = game.hp;
+                    } else if (game.hp > lastHp) {
+                        lastHp = game.hp;
+                    }
+
+                    if (game.kills > lastKills) {
+                        addTrauma(0.22f);
+                        AudioHelper.playGoblinHit();
+                        lastKills = game.kills;
+                    }
+
+                    int statsCount = game.stats.mined + game.stats.smelted + game.delivered;
+                    if (statsCount > lastStatsCount) {
+                        if (game.stats.smelted > 0 && statsCount == lastStatsCount + 1 && game.ball.metal > 0) {
+                            AudioHelper.playForgeFire();
+                            addTrauma(0.12f);
+                        } else if (game.delivered > 0 && statsCount == lastStatsCount + 1 && game.ball.metal == 0) {
+                            AudioHelper.playCoins();
+                            addTrauma(0.18f);
+                        } else {
+                            AudioHelper.playAnvil();
+                        }
+                        lastStatsCount = statsCount;
+                    }
+
+                    // Colpi di balista sparati
+                    if (!game.shots.isEmpty() && Math.random() < 0.35) {
+                        AudioHelper.playBallista();
                     }
                 }
-            } finally {
-                if (canvas != null) {
-                    try {
-                        holder.unlockCanvasAndPost(canvas);
-                    } catch (Exception ignored) {}
-                }
-            }
 
-            long elapsedMs = (System.nanoTime() - now) / 1_000_000L;
-            long sleepMs = 16L - elapsedMs;
-            if (sleepMs > 0) {
+                Canvas canvas = null;
                 try {
-                    Thread.sleep(sleepMs);
+                    canvas = holder.lockCanvas();
+                    if (canvas != null) {
+                        synchronized (holder) {
+                            drawGame(canvas, dt);
+                        }
+                    }
+                } finally {
+                    if (canvas != null) {
+                        try {
+                            holder.unlockCanvasAndPost(canvas);
+                        } catch (Exception ignored) {}
+                    }
+                }
+
+                long elapsedMs = (System.nanoTime() - now) / 1_000_000L;
+                long sleepMs = 16L - elapsedMs;
+                if (sleepMs > 0) {
+                    try {
+                        Thread.sleep(sleepMs);
+                    } catch (InterruptedException ignored) {}
+                }
+            } catch (Throwable t) {
+                android.util.Log.e("GameView", "Game loop error", t);
+                try {
+                    Thread.sleep(16);
                 } catch (InterruptedException ignored) {}
             }
         }
@@ -556,8 +573,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private void drawGame(Canvas canvas, float dt) {
         // Pietra scura della caverna sotterranea a pieno schermo
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setShader(new LinearGradient(0f, 0f, 0f, getHeight(), 0xFF140C09, 0xFF24150F, Shader.TileMode.CLAMP));
-        canvas.drawRect(0f, 0f, getWidth(), getHeight(), paintFill);
+        float bgW = getWidth() > 0 ? (float) getWidth() : Game.W;
+        float bgH = getHeight() > 0 ? (float) getHeight() : virtualH;
+        if (bgH > 10f) {
+            paintFill.setShader(new LinearGradient(0f, 0f, 0f, bgH, 0xFF140C09, 0xFF24150F, Shader.TileMode.CLAMP));
+        } else {
+            paintFill.setColor(0xFF140C09);
+        }
+        canvas.drawRect(0f, 0f, bgW, bgH, paintFill);
         paintFill.setShader(null);
 
         canvas.save();
@@ -863,7 +886,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             tempRect.set(b.x + 10f, b.y + 10f, b.x + b.w - 10f, b.y + b.h - 8f);
 
             if (game.forgeOpen) {
-                paintFill.setShader(new LinearGradient(b.x, b.y + 10f, b.x, b.y + b.h,
+                paintFill.setShader(new LinearGradient(b.x, b.y + 10f, b.x, Math.max(b.y + 11f, b.y + b.h),
                         0xFFFF3300, 0xFFFFCC00, Shader.TileMode.CLAMP));
                 canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
                 paintFill.setShader(null);
@@ -1178,15 +1201,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.translate(game.ball.x, game.ball.y);
         canvas.scale(ballSquashX, ballSquashY);
 
+        float glowR = Math.max(5f, game.ball.r * 1.8f);
         paintGlow.setStyle(Paint.Style.FILL);
         if (game.burn) {
-            paintGlow.setShader(new RadialGradient(0f, 0f, game.ball.r * 1.8f,
+            paintGlow.setShader(new RadialGradient(0f, 0f, glowR,
                     0xFFFF5500, 0x00FF0000, Shader.TileMode.CLAMP));
         } else {
-            paintGlow.setShader(new RadialGradient(0f, 0f, game.ball.r * 1.8f,
+            paintGlow.setShader(new RadialGradient(0f, 0f, glowR,
                     0xFFF59E0B, 0x00D97706, Shader.TileMode.CLAMP));
         }
-        canvas.drawCircle(0f, 0f, game.ball.r * 1.8f, paintGlow);
+        canvas.drawCircle(0f, 0f, glowR, paintGlow);
         paintGlow.setShader(null);
 
         paintFill.setStyle(Paint.Style.FILL);
@@ -1335,9 +1359,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         // ==========================================
         // BARRA INFERIORE A FILO SCHERMO INTERO
         // ==========================================
-        float barTop = virtualH - 120f;
+        float barH = 120f;
+        float barTop = Math.max(0f, virtualH - barH);
+        float barBottom = Math.max(barTop + 1f, virtualH);
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setShader(new LinearGradient(0f, barTop, 0f, virtualH, 0xEE1E110A, 0xFF120A05, Shader.TileMode.CLAMP));
+        paintFill.setShader(new LinearGradient(0f, barTop, 0f, barBottom, 0xEE1E110A, 0xFF120A05, Shader.TileMode.CLAMP));
         canvas.drawRect(0f, barTop, Game.W, virtualH, paintFill);
         paintFill.setShader(null);
 
