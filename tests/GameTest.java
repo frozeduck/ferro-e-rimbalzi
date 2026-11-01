@@ -17,8 +17,9 @@ public class GameTest {
         testSpedizioneNelBoscoDeiNani();
         testHubInterattivoEdificiEPotenziamenti();
         testSpedizioneNellaCavernaDeiCristalliEPrismiMultiball();
+        testGameListenerEventiEFeedbackGameFeel();
 
-        System.out.println("TUTTI I 13 TEST PASSATI CON SUCCESSO! (13/13)");
+        System.out.println("TUTTI I 14 TEST PASSATI CON SUCCESSO! (14/14)");
     }
 
     private static void assertEquals(Object actual, Object expected, String message) {
@@ -422,5 +423,63 @@ public class GameTest {
         assertEquals(s.clanGems, 8, "Gemme accreditate al clan all'Avamposto");
         assertEquals(s.clanTotalGems, 8, "Statistica storica gemme aggiornata");
         System.out.println("✔ La spedizione nella Caverna dei Cristalli e il Multiball funzionano a regola d'arte");
+    }
+
+    public static void testGameListenerEventiEFeedbackGameFeel() {
+        Game s = new Game();
+        final boolean[] eventsFired = new boolean[6]; // 0: paddle, 1: wall, 2: enemyHit, 3: heartLost, 4: mine, 5: building
+
+        s.listener = new Game.GameListener() {
+            @Override
+            public void onPaddleHit(Game.Ball ball, float hitOffsetRatio) { eventsFired[0] = true; }
+            @Override
+            public void onWallHit(Game.Ball ball) { eventsFired[1] = true; }
+            @Override
+            public void onMushroomHit(Game.Mushroom m) {}
+            @Override
+            public void onPrismHit(Game.Prism p) {}
+            @Override
+            public void onEnemyHit(Game.Enemy e, int dmg, boolean killed) { eventsFired[2] = true; }
+            @Override
+            public void onHeartLost() { eventsFired[3] = true; }
+            @Override
+            public void onBuildingHit(Game.Building b) { eventsFired[5] = true; }
+            @Override
+            public void onMineHit(Game.Mine m, int mineIndex) { eventsFired[4] = true; }
+            @Override
+            public void onLaserFired(float sx, float sy, float tx, float ty, boolean isLaser) {}
+        };
+
+        // 1. Test rimbalzo racchetta
+        s.phase = "wave";
+        s.ball.held = false;
+        s.ball.x = s.paddle.x;
+        s.ball.y = s.paddle.y - s.ball.r;
+        s.ball.vy = 200f;
+        s.step(0.016f);
+        assertTrue(eventsFired[0], "Listener ha ricevuto l'evento di rimbalzo su scudo/racchetta");
+
+        // 2. Test rimbalzo parete laterale
+        s.ball.x = 10f;
+        s.ball.y = 500f;
+        s.ball.vx = -200f;
+        s.step(0.016f);
+        assertTrue(eventsFired[1], "Listener ha ricevuto l'evento di impatto con la parete di roccia");
+
+        // 3. Test colpo a nemico e hitFlash
+        Game.Enemy e = new Game.Enemy();
+        e.id = "target";
+        e.hp = 5;
+        e.maxHp = 5;
+        s.hitEnemy(e);
+        assertTrue(eventsFired[2], "Listener ha ricevuto l'evento di colpo inflitto al nemico");
+        assertTrue(e.hitFlashTime > 0f, "Enemy ha il timer di hit-flash impostato per il feedback visivo");
+
+        // 4. Test perdita cuore
+        s.ball.y = s.getDefenseY() + 30f;
+        s.step(0.016f);
+        assertTrue(eventsFired[3], "Listener ha ricevuto l'evento di cuore perso / breccia");
+
+        System.out.println("✔ Il sistema di listener e feedback per il Game Feel risponde in tempo reale a tutti gli eventi");
     }
 }

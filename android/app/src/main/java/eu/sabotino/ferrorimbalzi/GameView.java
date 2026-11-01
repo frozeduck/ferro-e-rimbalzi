@@ -8,9 +8,15 @@ import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -41,10 +47,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private int lastHp = 6;
     private int lastKills = 0;
 
-    // Game Feel: Camera Trauma (pattern da game-feel skill)
+    // Game Feel: Camera Trauma, Hit-Stop, Rinculo e Feedback Aptico
     private float trauma = 0f;
+    private float hitStopTimer = 0f;
+    private float paddleRecoilY = 0f;
+    private float damageFlash = 0f;
     private float ballSquashX = 1f;
     private float ballSquashY = 1f;
+    private String lastPhase = "build";
+    private Vibrator vibrator;
+    private final Paint paintEnemyFlash = new Paint();
+    private final Paint paintDamageVignette = new Paint();
 
     // Texture e Sprite Grafici Fantasy Nanici (Miniera e Bosco)
     private Bitmap bmpMine;
@@ -187,6 +200,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintPixel.setDither(false);
 
         game = new Game();
+        initVibrator(context);
+        attachGameListener();
         lastHp = game.hp;
         loadClanProgress(context);
         loadBitmaps(context);
@@ -323,6 +338,170 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         trauma = Math.min(1f, trauma + t);
     }
 
+    private void initVibrator(Context context) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                VibratorManager vm = (VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+                if (vm != null) vibrator = vm.getDefaultVibrator();
+            } else {
+                vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    public void vibrateLight() {
+        vibrate(15, 60);
+    }
+
+    public void vibrateMedium() {
+        vibrate(28, 120);
+    }
+
+    public void vibrateHeavy() {
+        vibrate(45, 220);
+    }
+
+    public void vibrateHeartLost() {
+        try {
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    long[] timings = {0, 60, 40, 90};
+                    int[] amplitudes = {0, 200, 0, 255};
+                    vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1));
+                } else {
+                    vibrator.vibrate(new long[]{0, 60, 40, 90}, -1);
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private void vibrate(long millis, int amplitude) {
+        try {
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(millis, Math.min(255, Math.max(1, amplitude))));
+                } else {
+                    vibrator.vibrate(millis);
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    public void triggerHitStop(float durationSec) {
+        hitStopTimer = Math.max(hitStopTimer, durationSec);
+    }
+
+    private void attachGameListener() {
+        if (game == null) return;
+        game.listener = new Game.GameListener() {
+            @Override
+            public void onPaddleHit(Game.Ball ball, float hitOffsetRatio) {
+                AudioHelper.playShieldDeflect(hitOffsetRatio);
+                vibrateLight();
+                ballSquashX = 1.35f;
+                ballSquashY = 0.65f;
+                paddleRecoilY = 4.5f;
+                spawnParticles(ball.x, game.paddle.y, 10, 0xFFF59E0B, 0);
+            }
+
+            @Override
+            public void onWallHit(Game.Ball ball) {
+                AudioHelper.playWallClack();
+                ballSquashX = 0.78f;
+                ballSquashY = 1.25f;
+                spawnParticles(ball.x, ball.y, 5, 0xFF827B99, 2);
+            }
+
+            @Override
+            public void onMushroomHit(Game.Mushroom m) {
+                AudioHelper.playMushroomBounce();
+                vibrateMedium();
+                addTrauma(0.18f);
+                ballSquashX = 1.45f;
+                ballSquashY = 0.60f;
+                spawnParticles(m.x + m.w / 2f, m.y + m.h / 2f, 14, 0xFFF472B6, 4);
+            }
+
+            @Override
+            public void onPrismHit(Game.Prism p) {
+                AudioHelper.playCrystalChime();
+                vibrateMedium();
+                addTrauma(0.24f);
+                ballSquashX = 1.25f;
+                ballSquashY = 1.25f;
+                spawnParticles(p.x + p.w / 2f, p.y + p.h / 2f, 18, 0xFF67E8F9, 3);
+            }
+
+            @Override
+            public void onEnemyHit(Game.Enemy e, int dmg, boolean killed) {
+                if (killed) {
+                    AudioHelper.playGoblinHit();
+                    vibrateHeavy();
+                    addTrauma(0.35f);
+                    triggerHitStop(0.045f);
+                    int bloodColor = "spectre".equals(e.type) ? 0xFFA855F7 :
+                            ("golem".equals(e.type) ? 0xFF67E8F9 :
+                            ("spider".equals(e.type) ? 0xFF84CC16 : 0xFF22C55E));
+                    spawnParticles(e.x + e.w / 2f, e.y + e.h / 2f, 22, bloodColor, 0);
+                } else {
+                    vibrateLight();
+                    addTrauma(0.12f);
+                    spawnParticles(e.x + e.w / 2f, e.y + e.h / 2f, 6, 0xFFE2E8F0, 0);
+                }
+            }
+
+            @Override
+            public void onHeartLost() {
+                AudioHelper.playWarhorn();
+                vibrateHeartLost();
+                addTrauma(0.65f);
+                triggerHitStop(0.070f);
+                damageFlash = 0.75f;
+            }
+
+            @Override
+            public void onBuildingHit(Game.Building b) {
+                if ("forge".equals(b.type)) {
+                    AudioHelper.playForgeFire();
+                    spawnParticles(b.x + b.w / 2f, b.y + 12f, 12, 0xFFFF8A00, 1);
+                } else if ("sawmill".equals(b.type)) {
+                    AudioHelper.playSawmillBuzz();
+                    spawnParticles(b.x + b.w / 2f, b.y + 12f, 14, 0xFFFCD34D, 5);
+                } else if ("gemcutter".equals(b.type)) {
+                    AudioHelper.playCrystalChime();
+                    spawnParticles(b.x + b.w / 2f, b.y + 12f, 14, 0xFF67E8F9, 3);
+                } else if ("vault".equals(b.type) || "depot".equals(b.type) || "crystal_vault".equals(b.type)) {
+                    AudioHelper.playCoins();
+                    spawnParticles(b.x + b.w / 2f, b.y + 12f, 16, 0xFFFBBF24, 0);
+                } else {
+                    AudioHelper.playWallClack();
+                    spawnParticles(b.x + b.w / 2f, b.y + b.h / 2f, 8, 0xFF827B99, 2);
+                }
+            }
+
+            @Override
+            public void onMineHit(Game.Mine m, int mineIndex) {
+                boolean isCrystal = "crystal_cave".equals(game.selectedBiome);
+                boolean isForest = "forest_wood".equals(game.selectedBiome);
+                AudioHelper.playMiningStrike(isCrystal, isForest);
+                vibrateLight();
+                int partColor = isCrystal ? 0xFF67E8F9 : (isForest ? 0xFF86EFAC : 0xFFD8A677);
+                int partType = isCrystal ? 3 : (isForest ? 5 : 2);
+                spawnParticles(m.x + m.w / 2f, m.y + m.h / 2f, 10, partColor, partType);
+            }
+
+            @Override
+            public void onLaserFired(float sx, float sy, float tx, float ty, boolean isLaser) {
+                if (isLaser) {
+                    AudioHelper.playLaserBeam();
+                    addTrauma(0.12f);
+                } else {
+                    AudioHelper.playBallista();
+                }
+            }
+        };
+    }
+
     public void spawnParticles(float x, float y, int count, int color, int type) {
         for (int i = 0; i < count; i++) {
             Particle p = particles[nextParticleIdx];
@@ -331,17 +510,31 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             p.x = x;
             p.y = y;
             float angle = (float) (Math.random() * Math.PI * 2.0);
-            float speed = (type == 1) ? 15f + (float) (Math.random() * 40f) : 35f + (float) (Math.random() * 150f);
+            float speed;
             if (type == 1) { // Braci della fornace che salgono
+                speed = 15f + (float) (Math.random() * 40f);
                 p.vx = (float) (Math.cos(angle) * speed * 0.4f);
-                p.vy = -Math.abs((float) (Math.sin(angle) * speed)) - 20f;
+                p.vy = -Math.abs((float) (Math.sin(angle) * speed)) - 25f;
+            } else if (type == 4) { // Spore fungo fluttuanti
+                speed = 20f + (float) (Math.random() * 45f);
+                p.vx = (float) (Math.cos(angle) * speed * 0.8f);
+                p.vy = -Math.abs((float) (Math.sin(angle) * speed * 0.5f)) - 10f;
+            } else if (type == 3) { // Frammenti di cristallo scintillanti
+                speed = 50f + (float) (Math.random() * 180f);
+                p.vx = (float) (Math.cos(angle) * speed);
+                p.vy = (float) (Math.sin(angle) * speed);
+            } else if (type == 5) { // Trucioli di legno
+                speed = 30f + (float) (Math.random() * 70f);
+                p.vx = (float) (Math.cos(angle) * speed);
+                p.vy = (float) (Math.sin(angle) * speed * 0.6f) - 15f;
             } else {
+                speed = 35f + (float) (Math.random() * 150f);
                 p.vx = (float) (Math.cos(angle) * speed);
                 p.vy = (float) (Math.sin(angle) * speed);
             }
-            p.life = 0.2f + (float) (Math.random() * 0.4f);
+            p.life = 0.22f + (float) (Math.random() * 0.42f);
             p.maxLife = p.life;
-            p.size = (type == 2) ? 3.5f + (float) (Math.random() * 3f) : 2f + (float) (Math.random() * 2.5f);
+            p.size = (type == 2 || type == 5) ? 3.5f + (float) (Math.random() * 3f) : 2f + (float) (Math.random() * 2.5f);
             p.color = color;
             p.type = type;
         }
@@ -458,6 +651,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     public void resetGame() {
         game = new Game();
+        attachGameListener();
         game.setVirtualHeight(virtualH);
         paused = false;
         showTutorial = false;
@@ -467,6 +661,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         lastHp = game.hp;
         lastKills = 0;
         trauma = 0f;
+        hitStopTimer = 0f;
+        paddleRecoilY = 0f;
+        damageFlash = 0f;
     }
 
     @Override
@@ -495,7 +692,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                         }
                     }
 
-                    // Aggiorna particelle
+                    // Aggiorna particelle con fisica specifica per materiale
                     for (Particle p : particles) {
                         if (!p.active) continue;
                         p.life -= dt;
@@ -505,8 +702,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                         }
                         p.x += p.vx * dt;
                         p.y += p.vy * dt;
-                        p.vx *= 0.95f;
-                        p.vy *= 0.95f;
+                        if (p.type == 1 || p.type == 4) {
+                            p.vy -= 18f * dt; // Sale verso l'alto
+                            p.vx *= 0.96f;
+                        } else if (p.type == 2 || p.type == 5) {
+                            p.vy += 80f * dt; // Gravità verso il basso
+                            p.vx *= 0.94f;
+                        } else {
+                            p.vx *= 0.93f;
+                            p.vy *= 0.93f;
+                        }
                     }
 
                     // Faville continue dalla forgia attiva
@@ -518,46 +723,29 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                         }
                     }
 
-                    // Riacquisto forma della sfera
-                    ballSquashX += (1f - ballSquashX) * 12f * dt;
-                    ballSquashY += (1f - ballSquashY) * 12f * dt;
-
-                    // Simulazione di gioco
-                    game.step(dt);
-
-                    // Feedback audio ed effetti
-                    if (game.hp < lastHp) {
-                        addTrauma(0.55f);
-                        AudioHelper.playWarhorn();
-                        lastHp = game.hp;
-                    } else if (game.hp > lastHp) {
-                        lastHp = game.hp;
+                    // Hit-Stop: micro-freeze per esaltare l'impatto dei colpi e delle sconfitte
+                    if (hitStopTimer > 0f) {
+                        hitStopTimer = Math.max(0f, hitStopTimer - dt);
+                    } else {
+                        game.step(dt);
                     }
 
-                    if (game.kills > lastKills) {
-                        addTrauma(0.22f);
-                        AudioHelper.playGoblinHit();
-                        lastKills = game.kills;
-                    }
+                    // Riacquisto forma della sfera (Squash & Stretch con ritorno elastico)
+                    ballSquashX += (1f - ballSquashX) * 16f * dt;
+                    ballSquashY += (1f - ballSquashY) * 16f * dt;
 
-                    int statsCount = game.stats.mined + game.stats.smelted + game.delivered;
-                    if (statsCount > lastStatsCount) {
-                        if (game.stats.smelted > 0 && statsCount == lastStatsCount + 1 && game.ball.metal > 0) {
-                            AudioHelper.playForgeFire();
-                            addTrauma(0.12f);
-                        } else if (game.delivered > 0 && statsCount == lastStatsCount + 1 && game.ball.metal == 0) {
-                            AudioHelper.playCoins();
-                            addTrauma(0.18f);
-                        } else {
-                            AudioHelper.playAnvil();
-                        }
-                        lastStatsCount = statsCount;
-                    }
+                    // Recupero rinculo dello scudo nanico
+                    paddleRecoilY += (0f - paddleRecoilY) * 18f * dt;
 
-                    // Colpi di balista sparati
-                    if (!game.shots.isEmpty() && Math.random() < 0.35) {
-                        AudioHelper.playBallista();
+                    // Decadimento bagliore da danno (Damage Vignette)
+                    damageFlash = Math.max(0f, damageFlash - 1.5f * dt);
+
+                    // Trionfo spedizione vinta: fanfara solenne
+                    if ("won".equals(game.phase) && !"won".equals(lastPhase)) {
+                        AudioHelper.playVictoryFanfare();
+                        vibrate(50, 180);
                     }
+                    lastPhase = game.phase;
                 }
 
                 Canvas canvas = null;
@@ -620,16 +808,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if ("plaza".equals(hubModal)) {
                 if (cardHubForge.contains(tx, ty)) {
                     hubModal = "forge";
-                    AudioHelper.playAnvil();
+                    AudioHelper.playButtonClick();
+                    vibrateLight();
                 } else if (cardHubTavern.contains(tx, ty)) {
                     hubModal = "tavern";
-                    AudioHelper.playAnvil();
+                    AudioHelper.playButtonClick();
+                    vibrateLight();
                 } else if (cardHubBank.contains(tx, ty)) {
                     hubModal = "bank";
-                    AudioHelper.playAnvil();
+                    AudioHelper.playButtonClick();
+                    vibrateLight();
                 } else if (cardHubGate.contains(tx, ty)) {
                     hubModal = "gate";
-                    AudioHelper.playAnvil();
+                    AudioHelper.playButtonClick();
+                    vibrateLight();
                 }
                 return;
             }
@@ -639,23 +831,27 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                     if (game.buyClanUpgrade("hp")) {
                         saveClanProgress(getContext());
                         AudioHelper.playAnvil();
+                        vibrateMedium();
                         spawnParticles(tx, ty, 20, 0xFFEAB308, 0);
                     }
                 } else if (btnUpgradeCap.contains(tx, ty)) {
                     if (game.buyClanUpgrade("capacity")) {
                         saveClanProgress(getContext());
                         AudioHelper.playAnvil();
+                        vibrateMedium();
                         spawnParticles(tx, ty, 20, 0xFF10B981, 0);
                     }
                 } else if (btnUpgradeDmg.contains(tx, ty)) {
                     if (game.buyClanUpgrade("damage")) {
                         saveClanProgress(getContext());
                         AudioHelper.playAnvil();
+                        vibrateMedium();
                         spawnParticles(tx, ty, 20, 0xFFEF4444, 0);
                     }
                 } else if (btnModalClose.contains(tx, ty)) {
                     hubModal = "plaza";
-                    AudioHelper.playAnvil();
+                    AudioHelper.playButtonClick();
+                    vibrateLight();
                 }
                 return;
             }
@@ -664,24 +860,28 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                 if (btnTavernHeart.contains(tx, ty)) {
                     if (game.buyTavernBuff("heart")) {
                         saveClanProgress(getContext());
-                        AudioHelper.playAnvil();
+                        AudioHelper.playButtonClick();
+                        vibrateLight();
                         spawnParticles(tx, ty, 16, 0xFFEF4444, 1);
                     }
                 } else if (btnTavernSpeed.contains(tx, ty)) {
                     if (game.buyTavernBuff("speed")) {
                         saveClanProgress(getContext());
-                        AudioHelper.playAnvil();
+                        AudioHelper.playButtonClick();
+                        vibrateLight();
                         spawnParticles(tx, ty, 16, 0xFF10B981, 1);
                     }
                 } else if (btnTavernCharge.contains(tx, ty)) {
                     if (game.buyTavernBuff("iron_start")) {
                         saveClanProgress(getContext());
-                        AudioHelper.playAnvil();
+                        AudioHelper.playButtonClick();
+                        vibrateLight();
                         spawnParticles(tx, ty, 16, 0xFFF59E0B, 1);
                     }
                 } else if (btnModalClose.contains(tx, ty)) {
                     hubModal = "plaza";
-                    AudioHelper.playAnvil();
+                    AudioHelper.playButtonClick();
+                    vibrateLight();
                 }
                 return;
             }
@@ -689,7 +889,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if ("bank".equals(hubModal)) {
                 if (btnModalClose.contains(tx, ty)) {
                     hubModal = "plaza";
-                    AudioHelper.playAnvil();
+                    AudioHelper.playButtonClick();
+                    vibrateLight();
                 }
                 return;
             }
@@ -697,38 +898,45 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if ("gate".equals(hubModal)) {
                 if (cardMineIron.contains(tx, ty)) {
                     game.selectedBiome = "mine_iron";
-                    AudioHelper.playAnvil();
+                    AudioHelper.playButtonClick();
+                    vibrateLight();
                 } else if (cardForestWood.contains(tx, ty)) {
                     if (game.forestUnlocked) {
                         game.selectedBiome = "forest_wood";
-                        AudioHelper.playAnvil();
+                        AudioHelper.playButtonClick();
+                        vibrateLight();
                     } else if (game.clanIron >= 14) {
                         game.unlockForest();
                         saveClanProgress(getContext());
                         game.selectedBiome = "forest_wood";
                         AudioHelper.playWarhorn();
+                        vibrateHeavy();
                     } else {
-                        AudioHelper.playAnvil();
+                        AudioHelper.playButtonClick();
                     }
                 } else if (cardCrystalCave.contains(tx, ty)) {
                     if (game.crystalUnlocked) {
                         game.selectedBiome = "crystal_cave";
-                        AudioHelper.playAnvil();
+                        AudioHelper.playButtonClick();
+                        vibrateLight();
                     } else if (game.clanIron >= 18 && game.clanWood >= 14) {
                         game.unlockCrystal();
                         saveClanProgress(getContext());
                         game.selectedBiome = "crystal_cave";
                         AudioHelper.playWarhorn();
+                        vibrateHeavy();
                     } else {
-                        AudioHelper.playAnvil();
+                        AudioHelper.playButtonClick();
                     }
                 } else if (btnStartExpedition.contains(tx, ty)) {
                     game.startExpedition(game.selectedBiome);
                     saveClanProgress(getContext());
                     AudioHelper.playWarhorn();
+                    vibrateHeavy();
                 } else if (btnModalClose.contains(tx, ty)) {
                     hubModal = "plaza";
-                    AudioHelper.playAnvil();
+                    AudioHelper.playButtonClick();
+                    vibrateLight();
                 }
                 return;
             }
@@ -738,30 +946,35 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         if (showTutorial) {
             if (btnTutorialClose.contains(tx, ty)) {
                 showTutorial = false;
-                AudioHelper.playAnvil();
+                AudioHelper.playButtonClick();
+                vibrateLight();
             }
             return;
         }
 
         if (btnHelp.contains(tx, ty)) {
             showTutorial = true;
-            AudioHelper.playAnvil();
+            AudioHelper.playButtonClick();
+            vibrateLight();
             return;
         }
 
         if (btnPause.contains(tx, ty)) {
             togglePause();
-            AudioHelper.playAnvil();
+            AudioHelper.playButtonClick();
+            vibrateLight();
             return;
         }
 
         if (paused) {
             if (btnResume.contains(tx, ty)) {
                 paused = false;
-                AudioHelper.playAnvil();
+                AudioHelper.playButtonClick();
+                vibrateLight();
             } else if (btnPauseRestart.contains(tx, ty)) {
                 resetGame();
-                AudioHelper.playAnvil();
+                AudioHelper.playButtonClick();
+                vibrateLight();
             }
             return;
         }
@@ -770,14 +983,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if (cardUpgrade1.contains(tx, ty)) {
                 game.chooseUpgrade("cargo");
                 AudioHelper.playAnvil();
+                vibrateMedium();
                 addTrauma(0.15f);
             } else if (cardUpgrade2.contains(tx, ty)) {
                 game.chooseUpgrade("paddle");
                 AudioHelper.playAnvil();
+                vibrateMedium();
                 addTrauma(0.15f);
             } else if (cardUpgrade3.contains(tx, ty)) {
                 game.chooseUpgrade("damage");
                 AudioHelper.playAnvil();
+                vibrateMedium();
                 addTrauma(0.15f);
             }
             return;
@@ -787,10 +1003,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if (btnReturnHub.contains(tx, ty)) {
                 game.returnToHub();
                 saveClanProgress(getContext());
-                AudioHelper.playAnvil();
+                AudioHelper.playButtonClick();
+                vibrateLight();
             } else if (btnRestart.contains(tx, ty)) {
                 resetGame();
-                AudioHelper.playAnvil();
+                AudioHelper.playButtonClick();
+                vibrateLight();
             }
             return;
         }
@@ -800,6 +1018,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                 placingType = null;
                 game.startWave();
                 AudioHelper.playWarhorn();
+                vibrateHeavy();
                 addTrauma(0.2f);
                 return;
             }
@@ -807,19 +1026,22 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                 String wallType = "crystal_cave".equals(game.selectedBiome) ? "crystal_wall" :
                         ("forest_wood".equals(game.selectedBiome) ? "wood_wall" : "wall");
                 placingType = wallType.equals(placingType) ? null : wallType;
-                AudioHelper.playAnvil();
+                AudioHelper.playButtonClick();
+                vibrateLight();
                 return;
             }
             if (btnTurret.contains(tx, ty)) {
                 String turretType = "crystal_cave".equals(game.selectedBiome) ? "laser_turret" : "turret";
                 placingType = turretType.equals(placingType) ? null : turretType;
-                AudioHelper.playAnvil();
+                AudioHelper.playButtonClick();
+                vibrateLight();
                 return;
             }
 
             if (placingType != null) {
                 if (game.build(placingType, tx, ty)) {
                     AudioHelper.playAnvil();
+                    vibrateMedium();
                     spawnParticles(tx, ty, 16, 0xFFEAB308, 0);
                     placingType = null;
                 }
@@ -841,17 +1063,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if (btnForge.contains(tx, ty)) {
                 game.forgeOpen = !game.forgeOpen;
                 if (game.forgeOpen) AudioHelper.playForgeFire();
-                else AudioHelper.playAnvil();
+                else AudioHelper.playButtonClick();
+                vibrateLight();
                 return;
             }
             if (btnBurn.contains(tx, ty)) {
                 game.burn = !game.burn;
-                AudioHelper.playAnvil();
+                AudioHelper.playButtonClick();
+                vibrateLight();
                 return;
             }
             if (btnRecall.contains(tx, ty)) {
                 if (game.recall()) {
                     AudioHelper.playWarhorn();
+                    vibrateHeavy();
                     addTrauma(0.25f);
                     spawnParticles(game.ball.x, game.ball.y, 25, 0xFFF59E0B, 0);
                 }
@@ -1062,6 +1287,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             drawResultOverlay(canvas);
         }
 
+        // Damage Flash Vignette quando la rocca subisce una breccia o caduta sfera
+        if (damageFlash > 0f) {
+            paintDamageVignette.setStyle(Paint.Style.FILL);
+            paintDamageVignette.setColor(Color.argb((int)(140 * damageFlash), 220, 38, 38));
+            canvas.drawRect(0f, 0f, Game.W, virtualH, paintDamageVignette);
+        }
+
         canvas.restore();
     }
 
@@ -1140,6 +1372,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void drawPreservingAspect(Canvas canvas, Bitmap bmp, float x, float y, float w, float h) {
+        drawPreservingAspect(canvas, bmp, x, y, w, h, paintPixel);
+    }
+
+    private void drawPreservingAspect(Canvas canvas, Bitmap bmp, float x, float y, float w, float h, Paint paint) {
         if (bmp == null) return;
         float bmpRatio = (float) bmp.getWidth() / bmp.getHeight();
         float boxRatio = w / h;
@@ -1153,7 +1389,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         float cx = x + w / 2f;
         float cy = y + h / 2f;
         tempRect.set(cx - drawW / 2f, cy - drawH / 2f, cx + drawW / 2f, cy + drawH / 2f);
-        canvas.drawBitmap(bmp, null, tempRect, paintPixel);
+        canvas.drawBitmap(bmp, null, tempRect, paint != null ? paint : paintPixel);
     }
 
     private void drawOreVein(Canvas canvas, Game.Mine m, int index) {
@@ -1183,7 +1419,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private void drawBuilding(Canvas canvas, Game.Building b) {
         if ("wall".equals(b.type) || "wood_wall".equals(b.type) || "crystal_wall".equals(b.type)) {
             // Le mura e barricate coprono l'intera larghezza e altezza del box di collisione
-            tempRect.set(b.x, b.y, b.x + b.w, b.y + b.h);
+            float hitDt = game.elapsed - game.hits.getOrDefault(b.id, -10f);
+            float wobbleY = (hitDt >= 0f && hitDt < 0.16f) ? (float) Math.sin(hitDt * 40f) * 2.5f * (1f - hitDt / 0.16f) : 0f;
+            tempRect.set(b.x, b.y + wobbleY, b.x + b.w, b.y + b.h + wobbleY);
             Bitmap wallBmp = "crystal_wall".equals(b.type) && bmpCrystalWall != null ? bmpCrystalWall :
                     ("wood_wall".equals(b.type) && bmpWoodWall != null ? bmpWoodWall : bmpWall);
             if (wallBmp != null) {
@@ -1218,6 +1456,32 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                 paintFill.setStyle(Paint.Style.FILL);
                 paintFill.setColor("gemcutter".equals(b.type) ? 0xFF14243B : ("forge".equals(b.type) ? 0xFF1C1917 : "sawmill".equals(b.type) ? 0xFF382214 : 0xFF3B1A0A));
                 canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+            }
+
+            // Dettagli animati: rotazione lama segheria, scintille tagliapietre, respiro fiamma fucina
+            if ("sawmill".equals(b.type) && "wave".equals(game.phase)) {
+                float bladeCx = b.x + b.w * 0.40f;
+                float bladeCy = b.y + b.h * 0.48f;
+                float spin = game.elapsed * 16f;
+                paintStroke.setStyle(Paint.Style.STROKE);
+                paintStroke.setStrokeWidth(2f);
+                paintStroke.setColor(0xFFFDE047);
+                float gx = (float) Math.cos(spin) * 12f;
+                float gy = (float) Math.sin(spin) * 12f;
+                canvas.drawLine(bladeCx - gx, bladeCy - gy, bladeCx + gx, bladeCy + gy, paintStroke);
+            } else if ("gemcutter".equals(b.type)) {
+                float shimmerX = b.x + b.w * (0.35f + 0.35f * (float) Math.sin(game.elapsed * 3.5f));
+                float shimmerY = b.y + b.h * 0.45f;
+                paintFill.setStyle(Paint.Style.FILL);
+                paintFill.setColor(0xCC67E8F9);
+                canvas.drawCircle(shimmerX, shimmerY, 3.5f, paintFill);
+                paintFill.setColor(0xFFFFFFFF);
+                canvas.drawCircle(shimmerX, shimmerY, 1.5f, paintFill);
+            } else if ("forge".equals(b.type) && game.forgeOpen) {
+                float hearthPulse = 0.7f + 0.3f * (float) Math.sin(game.elapsed * 5f);
+                paintGlow.setStyle(Paint.Style.FILL);
+                paintGlow.setColor(Color.argb((int)(70 * hearthPulse), 255, 138, 0));
+                canvas.drawCircle(b.x + b.w * 0.5f, b.y + b.h * 0.56f, 22f * hearthPulse, paintGlow);
             }
         }
 
@@ -1281,16 +1545,33 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         Bitmap enemyBmp = "golem".equals(e.type) && bmpGolem != null ? bmpGolem :
                 ("spectre".equals(e.type) && bmpSpectre != null ? bmpSpectre :
                 ("spider".equals(e.type) && bmpSpider != null ? bmpSpider : bmpGoblin));
+
+        float cx = e.x + e.w / 2f;
+        float cy = e.y + e.h / 2f;
+
+        canvas.save();
+        if (e.hitFlashTime > 0f) {
+            float wobble = (float) Math.sin(e.hitFlashTime * 35f) * 0.12f;
+            canvas.scale(1f + wobble, 1f - wobble, cx, cy);
+        }
+
         if (enemyBmp != null) {
-            drawPreservingAspect(canvas, enemyBmp, e.x, e.y, e.w, e.h);
+            if (e.hitFlashTime > 0f) {
+                paintEnemyFlash.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_ATOP));
+                drawPreservingAspect(canvas, enemyBmp, e.x, e.y, e.w, e.h, paintEnemyFlash);
+            } else {
+                drawPreservingAspect(canvas, enemyBmp, e.x, e.y, e.w, e.h, paintPixel);
+            }
         } else {
             tempRect.set(e.x, e.y, e.x + e.w, e.y + e.h);
             paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor("golem".equals(e.type) ? 0xFF0E344E : ("spectre".equals(e.type) ? 0xFF3B1B54 : ("spider".equals(e.type) ? 0xFF581C87 : 0xFF16A34A)));
+            paintFill.setColor(e.hitFlashTime > 0f ? Color.WHITE :
+                    ("golem".equals(e.type) ? 0xFF0E344E : ("spectre".equals(e.type) ? 0xFF3B1B54 : ("spider".equals(e.type) ? 0xFF581C87 : 0xFF16A34A))));
             canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
         }
+        canvas.restore();
 
-        // Barra vita goblin se ferito
+        // Barra vita mostro se ferito
         if (e.hp < e.maxHp) {
             float barW = e.w * 0.9f;
             float barH = 4f;
@@ -1306,7 +1587,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     private void drawDwarvenShield(Canvas canvas) {
         float px = game.paddle.x;
-        float py = game.paddle.y;
+        float py = game.paddle.y + paddleRecoilY;
         float pw = game.paddleWidth;
         float ph = 24f;
 
@@ -1318,21 +1599,72 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             paintFill.setColor(0xFF78350F);
             canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
         }
+
+        // Rinforzo visivo al rimbalzo: bagliore dorato sul bordo quando lo scudo incassa l'impatto
+        if (paddleRecoilY > 0.8f) {
+            paintStroke.setStyle(Paint.Style.STROKE);
+            paintStroke.setStrokeWidth(2.5f);
+            int glowAlpha = (int) (220 * Math.min(1f, paddleRecoilY / 4f));
+            paintStroke.setColor(Color.argb(glowAlpha, 251, 191, 36));
+            canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
+        }
     }
 
     private void drawRunicAim(Canvas canvas) {
+        float x0 = game.ball.x;
+        float y0 = game.ball.y;
+        float aim = game.aim;
+        float dx = (float) Math.cos(aim);
+        float dy = (float) Math.sin(aim);
+        if (dy >= 0f) dy = -0.01f;
+
+        float minX = 14f + game.ball.r;
+        float maxX = Game.W - 14f - game.ball.r;
+        float minY = safeInsetTop + 80f + game.ball.r;
+
+        float tX = dx < 0f ? (minX - x0) / dx : (dx > 0f ? (maxX - x0) / dx : 9999f);
+        float tY = (minY - y0) / dy;
+        float t1 = Math.min(tX, tY);
+        if (t1 < 0f) t1 = 160f;
+
+        float x1 = x0 + dx * t1;
+        float y1 = y0 + dy * t1;
+
+        // Traiettoria primaria
         paintStroke.setStyle(Paint.Style.STROKE);
-        paintStroke.setStrokeWidth(2f);
-        paintStroke.setColor(0xCCF59E0B);
+        paintStroke.setStrokeWidth(2.5f);
+        paintStroke.setColor(0xEEF59E0B);
+        canvas.drawLine(x0, y0, x1, y1, paintStroke);
 
-        float endX = game.ball.x + (float) Math.cos(game.aim) * 160f;
-        float endY = game.ball.y + (float) Math.sin(game.aim) * 160f;
-        canvas.drawLine(game.ball.x, game.ball.y, endX, endY, paintStroke);
-
+        // Nodi runici tratteggiati
         paintFill.setStyle(Paint.Style.FILL);
-        paintFill.setColor(0xFFF59E0B);
-        canvas.drawCircle(endX, endY, 4f, paintFill);
+        paintFill.setColor(0xFFFDE68A);
+        for (float f = 0.2f; f < 0.95f; f += 0.2f) {
+            canvas.drawCircle(x0 + dx * t1 * f, y0 + dy * t1 * f, 2.5f, paintFill);
+        }
 
+        // Nodo d'impatto / rimbalzo predetto
+        paintFill.setColor(0xFFF59E0B);
+        canvas.drawCircle(x1, y1, 5f, paintFill);
+        paintStroke.setStrokeWidth(1.5f);
+        paintStroke.setColor(0xFFFFFFFF);
+        canvas.drawCircle(x1, y1, 5f, paintStroke);
+
+        // Traiettoria secondaria riflessa
+        float rdx = (t1 == tX) ? -dx : dx;
+        float rdy = (t1 == tY) ? -dy : dy;
+        float seg2Len = 140f;
+        float x2 = x1 + rdx * seg2Len;
+        float y2 = y1 + rdy * seg2Len;
+
+        paintStroke.setColor(0x88F59E0B);
+        paintStroke.setStrokeWidth(1.8f);
+        canvas.drawLine(x1, y1, x2, y2, paintStroke);
+
+        paintFill.setColor(0xFFF59E0B);
+        canvas.drawCircle(x2, y2, 3.5f, paintFill);
+
+        // Testo di guida
         paintText.setTextSize(12f);
         paintText.setColor(0xFFFEF3C7);
         paintText.setTextAlign(Paint.Align.CENTER);
@@ -1459,14 +1791,22 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     private void drawEffects(Canvas canvas) {
         for (Game.Effect eff : game.effects) {
+            float progress = eff.maxLife > 0f ? (1f - eff.life / eff.maxLife) : 0f;
             int alpha = (int) (255 * Game.clamp(eff.life, 0f, 1f));
-            paintText.setColor(Color.argb(alpha / 2, 0, 0, 0));
+            float scale = progress < 0.20f ? 1.0f + 0.40f * (1f - progress / 0.20f) : 1.0f;
+
+            canvas.save();
+            canvas.translate(eff.x, eff.y);
+            canvas.scale(scale, scale);
+
             paintText.setTextSize(14f);
             paintText.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText(eff.text, eff.x + 1.5f, eff.y + 1.5f, paintText);
+            paintText.setColor(Color.argb(alpha / 2, 0, 0, 0));
+            canvas.drawText(eff.text, 1.5f, 1.5f, paintText);
 
             paintText.setColor((eff.color & 0x00FFFFFF) | (alpha << 24));
-            canvas.drawText(eff.text, eff.x, eff.y, paintText);
+            canvas.drawText(eff.text, 0f, 0f, paintText);
+            canvas.restore();
         }
     }
 

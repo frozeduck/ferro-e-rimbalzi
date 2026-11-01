@@ -8,7 +8,8 @@ import java.util.concurrent.Executors;
 
 public class AudioHelper {
     private static final int SAMPLE_RATE = 22050;
-    private static final ExecutorService executor = Executors.newSingleThreadExecutor();
+    // Pool di 3 thread per consentire sovrapposizione polifonica naturale degli effetti sonori
+    private static final ExecutorService executor = Executors.newFixedThreadPool(3);
     private static volatile boolean soundEnabled = true;
 
     public static void toggleSound() {
@@ -44,13 +45,185 @@ public class AudioHelper {
                 track.write(buffer, 0, buffer.length);
                 track.play();
 
-                long durMs = (long) ((float) buffer.length / SAMPLE_RATE * 1000f) + 20;
-                Thread.sleep(Math.min(durMs, 350));
+                long durMs = (long) ((float) buffer.length / SAMPLE_RATE * 1000f) + 15;
+                Thread.sleep(Math.min(durMs, 400));
                 track.stop();
                 track.release();
             } catch (Exception ignored) {
             }
         });
+    }
+
+    // Rimbalzo sullo scudo nanico (Paddle Deflect) - Frequenza accordata alla posizione d'impatto
+    public static void playShieldDeflect(float hitOffsetRatio) {
+        if (!soundEnabled) return;
+        int n = (int) (SAMPLE_RATE * 0.11f);
+        short[] buf = new short[n];
+        // Centro = tono più profondo e roccioso, bordo = squillo metallico più acuto
+        float baseFreq = 380f + Math.abs(hitOffsetRatio) * 160f;
+        double p1 = 0, p2 = 0;
+        for (int i = 0; i < n; i++) {
+            float t = (float) i / n;
+            p1 += 2.0 * Math.PI * baseFreq / SAMPLE_RATE;
+            p2 += 2.0 * Math.PI * (baseFreq * 2.15f) / SAMPLE_RATE;
+            float decay = (float) Math.exp(-6.5 * t);
+            double noise = (Math.random() * 2.0 - 1.0) * 0.18 * (1f - t);
+            double s = (Math.sin(p1) * 0.65 + Math.sin(p2) * 0.25 + noise) * decay * 0.6;
+            buf[i] = (short) (s * 32767);
+        }
+        playBuffer(buf);
+    }
+
+    // Rimbalzo secco sulle pareti di roccia e travi perimetrali (Wall Clack)
+    public static void playWallClack() {
+        if (!soundEnabled) return;
+        int n = (int) (SAMPLE_RATE * 0.045f);
+        short[] buf = new short[n];
+        double p = 0;
+        for (int i = 0; i < n; i++) {
+            float t = (float) i / n;
+            float freq = 340f * (1f - t * 0.5f);
+            p += 2.0 * Math.PI * freq / SAMPLE_RATE;
+            float decay = (float) Math.exp(-12.0 * t);
+            double noise = (Math.random() * 2.0 - 1.0) * 0.25 * (1f - t);
+            double s = (Math.sin(p) * 0.65 + noise) * decay * 0.45;
+            buf[i] = (short) (s * 32767);
+        }
+        playBuffer(buf);
+    }
+
+    // Rimbalzo elastico sui Funghi Bouncer del Bosco (Springy Boing)
+    public static void playMushroomBounce() {
+        if (!soundEnabled) return;
+        int n = (int) (SAMPLE_RATE * 0.18f);
+        short[] buf = new short[n];
+        double p = 0;
+        for (int i = 0; i < n; i++) {
+            float t = (float) i / n;
+            // Sweep di frequenza ascendente caratteristico da rimbalzo molla
+            float freq = 220f + 360f * (float) Math.sin(t * Math.PI * 0.9);
+            p += 2.0 * Math.PI * freq / SAMPLE_RATE;
+            float decay = (float) Math.exp(-3.5 * t);
+            double s = Math.sin(p) * decay * 0.55;
+            buf[i] = (short) (s * 32767);
+        }
+        playBuffer(buf);
+    }
+
+    // Risonanza cristallina dei prismi e gemme pure (Crystal Chime / Multiball)
+    public static void playCrystalChime() {
+        if (!soundEnabled) return;
+        int n = (int) (SAMPLE_RATE * 0.26f);
+        short[] buf = new short[n];
+        // Arpeggio cristallino su tre toni armonici scintillanti (Mi6, La6, Mi7)
+        float[] freqs = { 1318f, 1760f, 2637f };
+        int subLen = n / 3;
+        for (int seg = 0; seg < 3; seg++) {
+            float f = freqs[seg];
+            double p1 = 0, p2 = 0;
+            for (int i = 0; i < subLen; i++) {
+                int idx = seg * subLen + i;
+                float segT = (float) i / subLen;
+                p1 += 2.0 * Math.PI * f / SAMPLE_RATE;
+                p2 += 2.0 * Math.PI * (f * 1.5f) / SAMPLE_RATE;
+                float decay = (float) Math.exp(-4.2 * segT);
+                double s = (Math.sin(p1) * 0.75 + Math.sin(p2) * 0.25) * decay * 0.48;
+                buf[idx] = (short) (s * 32767);
+            }
+        }
+        playBuffer(buf);
+    }
+
+    // Raggio laser focale ad alta energia (Laser Turret Discharge)
+    public static void playLaserBeam() {
+        if (!soundEnabled) return;
+        int n = (int) (SAMPLE_RATE * 0.12f);
+        short[] buf = new short[n];
+        double p = 0;
+        for (int i = 0; i < n; i++) {
+            float t = (float) i / n;
+            // Rapida discesa di frequenza sci-fi focalizzata
+            float freq = 1600f * (1f - t * 0.78f);
+            p += 2.0 * Math.PI * freq / SAMPLE_RATE;
+            float decay = (float) Math.exp(-3.8 * t);
+            double squareHarmonic = Math.sin(p) > 0 ? 0.35 : -0.35;
+            double s = (Math.sin(p) * 0.55 + squareHarmonic * 0.3) * decay * 0.52;
+            buf[i] = (short) (s * 32767);
+        }
+        playBuffer(buf);
+    }
+
+    // Segheria meccanica runica: lama dentata rotante sul legname (Sawmill Buzz)
+    public static void playSawmillBuzz() {
+        if (!soundEnabled) return;
+        int n = (int) (SAMPLE_RATE * 0.16f);
+        short[] buf = new short[n];
+        double p = 0;
+        for (int i = 0; i < n; i++) {
+            float t = (float) i / n;
+            float freq = 140f + (float) Math.sin(t * 50f) * 25f;
+            p += 2.0 * Math.PI * freq / SAMPLE_RATE;
+            float decay = (float) Math.exp(-2.2 * t);
+            double noise = (Math.random() * 2.0 - 1.0) * 0.45;
+            double s = (Math.sin(p) * 0.45 + noise * 0.55) * decay * 0.5;
+            buf[i] = (short) (s * 32767);
+        }
+        playBuffer(buf);
+    }
+
+    // Scalpellata d'estrazione minerali, ceppi o quarzo (Mining Strike)
+    public static void playMiningStrike(boolean isCrystal, boolean isForest) {
+        if (!soundEnabled) return;
+        int n = (int) (SAMPLE_RATE * 0.10f);
+        short[] buf = new short[n];
+        float baseF = isCrystal ? 1480f : (isForest ? 260f : 780f);
+        double p = 0;
+        for (int i = 0; i < n; i++) {
+            float t = (float) i / n;
+            p += 2.0 * Math.PI * baseF / SAMPLE_RATE;
+            float decay = (float) Math.exp(-6.8 * t);
+            double noise = (Math.random() * 2.0 - 1.0) * (isForest ? 0.4 : 0.2);
+            double s = (Math.sin(p) * 0.7 + noise) * decay * 0.45;
+            buf[i] = (short) (s * 32767);
+        }
+        playBuffer(buf);
+    }
+
+    // Clic tattile delicato in legno per i pulsanti UI (Button Click)
+    public static void playButtonClick() {
+        if (!soundEnabled) return;
+        int n = (int) (SAMPLE_RATE * 0.035f);
+        short[] buf = new short[n];
+        double p = 0;
+        for (int i = 0; i < n; i++) {
+            float t = (float) i / n;
+            p += 2.0 * Math.PI * 620f / SAMPLE_RATE;
+            float decay = (float) Math.exp(-14.0 * t);
+            buf[i] = (short) (Math.sin(p) * decay * 0.35 * 32767);
+        }
+        playBuffer(buf);
+    }
+
+    // Fanfara nanica solenne di vittoria (Victory Fanfare)
+    public static void playVictoryFanfare() {
+        if (!soundEnabled) return;
+        int n = (int) (SAMPLE_RATE * 0.44f);
+        short[] buf = new short[n];
+        // Accordo maestoso D4 (293.7), F#4 (370.0), A4 (440.0), D5 (587.3)
+        float[] chord = { 293.7f, 370.0f, 440.0f, 587.3f };
+        int subLen = n / 4;
+        for (int seg = 0; seg < 4; seg++) {
+            float f = chord[seg];
+            double p = 0;
+            for (int i = 0; i < subLen; i++) {
+                int idx = seg * subLen + i;
+                p += 2.0 * Math.PI * f / SAMPLE_RATE;
+                float segT = (float) i / subLen;
+                float env = segT < 0.1f ? (segT / 0.1f) : (float) Math.exp(-2.2 * (segT - 0.1f));
+                buf[idx] = (short) (Math.sin(p) * env * 0.45 * 32767);
+            }
+        }
+        playBuffer(buf);
     }
 
     // Colpo metallico su incudine nanica (Anvil Clang)

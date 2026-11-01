@@ -70,6 +70,7 @@ public class Game {
         public String type; // beetle, thief
         public float x, y, w, h;
         public int hp, maxHp;
+        public float hitFlashTime = 0f;
     }
 
     public static class Effect {
@@ -77,10 +78,24 @@ public class Game {
         public float x, y;
         public int color;
         public float life;
+        public float maxLife;
         public Effect(String text, float x, float y, int color, float life) {
-            this.text = text; this.x = x; this.y = y; this.color = color; this.life = life;
+            this.text = text; this.x = x; this.y = y; this.color = color; this.life = life; this.maxLife = life;
         }
     }
+
+    public interface GameListener {
+        void onPaddleHit(Ball ball, float hitOffsetRatio);
+        void onWallHit(Ball ball);
+        void onMushroomHit(Mushroom m);
+        void onPrismHit(Prism p);
+        void onEnemyHit(Enemy e, int dmg, boolean killed);
+        void onHeartLost();
+        void onBuildingHit(Building b);
+        void onMineHit(Mine m, int mineIndex);
+        void onLaserFired(float sx, float sy, float tx, float ty, boolean isLaser);
+    }
+    public GameListener listener;
 
     public static class Shot {
         public float x, y, tx, ty, life;
@@ -639,12 +654,17 @@ public class Game {
             normalize();
         }
         e.hp -= dmg;
-        if (e.hp <= 0) {
+        e.hitFlashTime = 0.12f;
+        boolean killed = e.hp <= 0;
+        if (killed) {
             kills++;
             xp++;
             event("Distrutto", e.x, e.y, 0xFF93CBB6);
         } else {
             event("−" + dmg, e.x, e.y, 0xFFF8E5C7);
+        }
+        if (listener != null) {
+            listener.onEnemyHit(e, dmg, killed);
         }
     }
 
@@ -706,9 +726,9 @@ public class Game {
             b.y += b.vy * h;
 
             // Pareti laterali e superiore
-            if (b.x < b.r + 14f) { b.x = b.r + 14f; b.vx = Math.abs(b.vx); }
-            if (b.x > W - 14f - b.r) { b.x = W - 14f - b.r; b.vx = -Math.abs(b.vx); }
-            if (b.y < b.r + topInset + 80f) { b.y = b.r + topInset + 80f; b.vy = Math.abs(b.vy); }
+            if (b.x < b.r + 14f) { b.x = b.r + 14f; b.vx = Math.abs(b.vx); if (listener != null) listener.onWallHit(b); }
+            if (b.x > W - 14f - b.r) { b.x = W - 14f - b.r; b.vx = -Math.abs(b.vx); if (listener != null) listener.onWallHit(b); }
+            if (b.y < b.r + topInset + 80f) { b.y = b.r + topInset + 80f; b.vy = Math.abs(b.vy); if (listener != null) listener.onWallHit(b); }
 
             // Rimbalzo sulla racchetta
             if (b.vy > 0f && b.y + b.r >= paddle.y && b.y - b.r < paddle.y + 16f
@@ -718,6 +738,7 @@ public class Game {
                 b.vx = (float) Math.cos(a) * speed();
                 b.vy = (float) Math.sin(a) * speed();
                 b.y = paddle.y - b.r - 0.2f;
+                if (listener != null) listener.onPaddleHit(b, off);
             }
 
             // Funghi elastici bouncers
@@ -729,6 +750,7 @@ public class Game {
                     b.vy *= 1.10f;
                     normalizeBall(b);
                     event("+RIMBALZO+", m.x + m.w / 2f, m.y - 10f, 0xFFF472B6);
+                    if (listener != null) listener.onMushroomHit(m);
                 }
             }
 
@@ -748,6 +770,7 @@ public class Game {
                         extraBall.isClone = true;
                         event("MULTIBALL! Sdoppiamento Sfera!", p.x + p.w / 2f, p.y + 20f, 0xFF67E8F9);
                     }
+                    if (listener != null) listener.onPrismHit(p);
                 }
             }
 
@@ -757,6 +780,7 @@ public class Game {
                 if (collide(b, m) && elapsed - hits.getOrDefault("mine" + i, -10f) > 0.32f) {
                     hits.put("mine" + i, elapsed);
                     interact("mine");
+                    if (listener != null) listener.onMineHit(m, i);
                 }
             }
 
@@ -768,6 +792,7 @@ public class Game {
                 if (collide(b, facility, solid) && elapsed - hits.getOrDefault(facility.id, -10f) > 0.28f) {
                     hits.put(facility.id, elapsed);
                     interact(facility.type);
+                    if (listener != null) listener.onBuildingHit(facility);
                 }
             }
 
@@ -817,6 +842,7 @@ public class Game {
         }
 
         for (Enemy e : enemies) {
+            e.hitFlashTime = Math.max(0f, e.hitFlashTime - dt);
             if (e.hp <= 0) continue;
             float speedY;
             if ("spectre".equals(e.type)) {
@@ -841,6 +867,7 @@ public class Game {
                 e.hp = 0;
                 hp--;
                 event("Breccia Nemica! −1 Cuore", e.x, getDefenseY() - 15f, 0xFFEF4444);
+                if (listener != null) listener.onHeartLost();
             }
         }
 
@@ -860,12 +887,18 @@ public class Game {
             if (targetEnemy != null && turret.cooldown == 0f) {
                 int dmg = isLaser ? 2 : 1;
                 targetEnemy.hp -= dmg;
-                if (targetEnemy.hp <= 0) {
+                targetEnemy.hitFlashTime = 0.12f;
+                boolean killed = targetEnemy.hp <= 0;
+                if (killed) {
                     kills++;
                     xp++;
                 }
                 shots.add(new Shot(turret.x + 25f, turret.y + 25f, targetEnemy.x + 21f, targetEnemy.y + 16f, isLaser ? 0.3f : 0.2f));
                 turret.cooldown = isLaser ? 1.3f : 1.6f;
+                if (listener != null) {
+                    listener.onLaserFired(turret.x + 25f, turret.y + 25f, targetEnemy.x + 21f, targetEnemy.y + 16f, isLaser);
+                    listener.onEnemyHit(targetEnemy, dmg, killed);
+                }
             }
         }
 
@@ -899,6 +932,7 @@ public class Game {
                     ball.held = true;
                     ball.trail.clear();
                     event("Sfera Caduta! −1 Cuore", paddle.x, getDefenseY() - 15f, 0xFFF97316);
+                    if (listener != null) listener.onHeartLost();
                 }
             }
         }
@@ -917,6 +951,7 @@ public class Game {
                 int penalty = (int) Math.ceil(escaped / 3.0);
                 hp = Math.max(0, hp - penalty);
                 event("Assalto nemico: Breccia! −" + penalty + " Cuori", 270f, getDefenseY() - 15f, 0xFFEF4444);
+                if (listener != null) listener.onHeartLost();
             }
             enemies.clear();
             if (hp <= 0) {

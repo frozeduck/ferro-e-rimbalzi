@@ -48,8 +48,11 @@ La piazza centrale dell'Avamposto offre 4 edifici interattivi visitabili toccand
 * **100% Nativo Android**: Sviluppato in Java standard con `SurfaceView` e rendering hardware su `Canvas` a ~60 FPS. Nessun wrapper web, nessun browser, nessun framework pesante.
 * **Layout Verticale Nativo (Portrait 9:16)**: Ottimizzato per display mobile con coordinate virtuali 540x960 e letterboxing adattivo ad alta precisione.
 * **Safe Area & Display Cutout**: Compatibilita totale con fotocamere punch-hole e schermi ultra-allungati (Samsung Galaxy Z Flip 7, 22:9).
-* **Grafica Pixel Art Fantasy Autentica (16-bit)**: 0% SVG vettoriale generico, palette 32 colori scalata con Nearest Neighbor pixel-per-pixel.
-* **Audio Procedurale Sintetico**: Generazione sonora tramite `AudioTrack` con decadimento esponenziale sintetizzato al volo (zero file audio da scaricare).
+* **Game Feel & "Juice" Dinamico**: Hit-stop freeze frame su impatti critici (45-70ms), Squash & Stretch reattivo con ritorno elastico, rinculo fisico dello scudo nanico (paddle recoil), flash silhouette bianco sui colpi nemici e damage vignette rossa allarme breccia.
+* **Mira Runica Predittiva**: Tracciamento predittivo con raycasting nanico che calcola la prima riflessione della traiettoria contro le pareti di roccia.
+* **Grafica Pixel Art Fantasy Autentica (16-bit)**: 0% SVG vettoriale generico, palette 32 colori scalata con Nearest Neighbor pixel-per-pixel, animazioni procedurali (lama segheria rotante, scintillio tagliapietre, respiro fiamma della fucina).
+* **Audio Procedurale Polifonico**: Sintesi sonora in tempo reale tramite `AudioTrack` multi-thread: deflessione scudo accordata per offset di battuta, rimbalzo secco pareti, molla boing funghi, risonanza arpeggiata dei cristalli, dardo balista, raggio laser, segheria e fanfara solenne di vittoria.
+* **Feedback Aptico Android (Vibrator)**: Vibrazioni tattili calibrate per tick leggeri su racchetta e UI, impulsi medi su funghi/prismi, scosse pesanti su nemici abbattuti e doppio impulso d'allarme su breccia.
 * **100% Offline e Sicuro**: Nessun permesso di rete (`android.permission.INTERNET`) richiesto nel Manifest.
 
 ---
@@ -72,7 +75,7 @@ adb install downloads/ferro-e-rimbalzi-0.9.9-debug.apk
 Tutto il ciclo di vita è automatizzato da Gradle e da script locali:
 
 ```bash
-# Esegue i 9 test unitari, compila l'APK e verifica l'integrità
+# Esegue i 14 test unitari, compila l'APK e verifica l'integrità
 ./scripts/build-apk.sh
 
 # Verifica di conformità (classes.dex, zero web, zero internet)
@@ -88,15 +91,16 @@ android/
 │   │   ├── MainActivity.java    # Activity immersiva verticale a schermo intero
 │   │   ├── GameView.java        # SurfaceView a 60 FPS con comandi touch per smartphone
 │   │   ├── Game.java            # Modello logico e fisico dell'arena verticale
-│   │   └── AudioHelper.java     # Sintesi sonora procedurale con AudioTrack
-│   ├── src/main/res/            # Risorse, colori e icona vettoriale
+│   │   └── AudioHelper.java     # Sintesi sonora procedurale polifonica con AudioTrack
+│   ├── src/main/res/            # Risorse, colori e icona pixel art
 │   └── src/main/AndroidManifest.xml
-downloads/                       # APK v0.3.0 compilato, sha256 e landing page
+downloads/                       # APK v0.9.9 compilato e sha256
 scripts/
 ├── build-apk.sh                 # Script di test e compilazione Gradle
-└── check-apk.py                 # Validatore di integrità dell'APK
+├── check-apk.py                 # Validatore di integrità dell'APK
+└── generate_sprites.py          # Generatore True Pixel Art 16-bit
 tests/
-└── GameTest.java                # 9 test unitari sulle regole del gioco
+└── GameTest.java                # 14 test unitari sulle regole del gioco e game feel
 .agents/skills/                  # Catalogo portable awesome-gamedev-agent-skills + router
 ```
 
