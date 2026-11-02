@@ -2,7 +2,7 @@
 
 Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, progettato da zero per essere giocato in **orientamento verticale (portrait)** su smartphone con una sola mano.
 
-**[Scarica la Release v0.9.9 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.9)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
+**[Scarica la Release v0.9.10 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.10)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
 
 ---
 
@@ -60,12 +60,12 @@ La piazza centrale dell'Avamposto offre 4 edifici interattivi visitabili toccand
 ## Download e Installazione
 
 Il pacchetto APK firmato pronto all'uso:
-* **APK**: `downloads/ferro-e-rimbalzi-0.9.9-debug.apk`
-* **Checksum**: `downloads/ferro-e-rimbalzi-0.9.9-debug.apk.sha256`
+* **APK**: `downloads/ferro-e-rimbalzi-0.9.10-debug.apk`
+* **Checksum**: `downloads/ferro-e-rimbalzi-0.9.10-debug.apk.sha256`
 
 Per installarlo tramite computer o adb:
 ```bash
-adb install downloads/ferro-e-rimbalzi-0.9.9-debug.apk
+adb install downloads/ferro-e-rimbalzi-0.9.10-debug.apk
 ```
 
 ---
@@ -94,7 +94,7 @@ android/
 │   │   └── AudioHelper.java     # Sintesi sonora procedurale polifonica con AudioTrack
 │   ├── src/main/res/            # Risorse, colori e icona pixel art
 │   └── src/main/AndroidManifest.xml
-downloads/                       # APK v0.9.9 compilato e sha256
+downloads/                       # APK v0.9.10 compilato e sha256
 scripts/
 ├── build-apk.sh                 # Script di test e compilazione Gradle
 ├── check-apk.py                 # Validatore di integrità dell'APK
