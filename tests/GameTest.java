@@ -18,8 +18,9 @@ public class GameTest {
         testHubInterattivoEdificiEPotenziamenti();
         testSpedizioneNellaCavernaDeiCristalliEPrismiMultiball();
         testGameListenerEventiEFeedbackGameFeel();
+        testBlocchiArkanoidRimbalzoSolidoEEstrazione();
 
-        System.out.println("TUTTI I 14 TEST PASSATI CON SUCCESSO! (14/14)");
+        System.out.println("TUTTI I 15 TEST PASSATI CON SUCCESSO! (15/15)");
     }
 
     private static void assertEquals(Object actual, Object expected, String message) {
@@ -38,7 +39,7 @@ public class GameTest {
         Game s = new Game();
         s.interact("mine");
         s.interact("mine");
-        assertEquals(s.iron, 6, "Ferro iniziale deve rimanere 6");
+        assertEquals(s.gold, 8, "Oro iniziale deve essere 8");
         assertEquals(s.ball.ore, 2, "Minerale raccolto nella sfera deve essere 2");
         assertTrue(!s.interact("depot"), "Deposito non accetta minerale grezzo non fuso");
 
@@ -49,14 +50,28 @@ public class GameTest {
         s.interact("forge");
         assertEquals(s.ball.ore, 0, "Minerale trasformato deve azzerarsi");
         assertEquals(s.ball.metal, 2, "Ferro nella sfera deve essere 2");
-        assertEquals(s.iron, 6, "Ferro spendibile non ancora incassato al deposito");
+        assertEquals(s.gold, 8, "Oro invariato dalla fusione");
 
         s.interact("depot");
-        assertEquals(s.iron, 8, "Ferro spendibile aumentato a 8");
-        assertEquals(s.delivered, 2, "Ferro consegnato aumentato a 2");
+        assertEquals(s.delivered, 2, "Ferro consegnato alla rocca aumentato a 2");
+        assertEquals(s.gold, 8, "Oro invariato dalle consegne (riservate al Clan)");
         assertEquals(s.ball.metal, 0, "Sfera svuotata al deposito");
         assertTrue(!s.interact("depot"), "Deposito non interagisce senza ferro");
-        System.out.println("✔ Il ferro è spendibile solo quando il carico trasformato raggiunge il deposito");
+
+        // Uccisione mostri rilascia oro tattico
+        Game.Enemy goblin = new Game.Enemy();
+        goblin.type = "beetle";
+        goblin.hp = 1;
+        s.hitEnemy(goblin);
+        assertEquals(s.gold, 9, "Goblin sconfitto rilascia 1 oro");
+
+        Game.Enemy golem = new Game.Enemy();
+        golem.type = "golem";
+        golem.hp = 1;
+        s.hitEnemy(golem);
+        assertEquals(s.gold, 12, "Golem pesante sconfitto rilascia 3 oro (9 + 3 = 12)");
+
+        System.out.println("✔ Economia separata: i mostri rilasciano oro, le risorse fuse alimentano l'obiettivo");
     }
 
     public static void testCapienzaConsumoDelCaricoEDanno() {
@@ -87,9 +102,10 @@ public class GameTest {
 
     public static void testCostruzioneEMovimentoRispettanoRisorseSpaziEFase() {
         Game s = new Game();
-        assertTrue(!s.build("turret", 270, 400), "Sentinella costa 7 ferro (iniziale 6, deve fallire)");
-        assertTrue(s.build("wall", 270, 600), "Sponda costa 3 ferro (deve riuscire)");
-        assertEquals(s.iron, 3, "Ferro rimasto dopo acquisto sponda");
+        s.gold = 6;
+        assertTrue(!s.build("turret", 270, 400), "Sentinella costa 7 oro (avendo 6, deve fallire)");
+        assertTrue(s.build("wall", 270, 600), "Sponda costa 3 oro (deve riuscire)");
+        assertEquals(s.gold, 3, "Oro rimasto dopo acquisto sponda (6 - 3 = 3)");
         assertTrue(!s.build("wall", 270, 600), "Non si può sovrapporre un edificio");
         assertTrue(!s.build("wall", -50, 400), "Fuori mappa vietato");
         assertTrue(!s.build("wall", 270, 100), "Costruzione fuori dalla zona mediana vietata");
@@ -99,7 +115,7 @@ public class GameTest {
         s.startWave();
         assertTrue(!s.build("wall", 270, 600), "Costruzione vietata durante l'ondata");
         assertTrue(!s.moveBuilding("forge", 150, 500), "Spostamento vietato durante l'ondata");
-        System.out.println("✔ Costruzione e movimento rispettano risorse, spazi e fase");
+        System.out.println("✔ Costruzione e movimento rispettano oro, spazi e fase");
     }
 
     public static void testLaSpondaRifletteLaVelocitaSenzaIntrappolareLaSfera() {
@@ -354,7 +370,7 @@ public class GameTest {
         // 2. Avvio spedizione nel bioma cristallo
         s.startExpedition("crystal_cave");
         assertEquals(s.selectedBiome, "crystal_cave", "Bioma selezionato Caverna Cristalli");
-        assertEquals(s.mines.size(), 3, "3 giacimenti di cristallo presenti");
+        assertEquals(s.mines.size(), 4, "4 blocchi Arkanoid di cristallo presenti");
         assertEquals(s.prisms.size(), 2, "2 prismi di risonanza presenti");
 
         // 3. Estrazione e lavorazione cristallo
@@ -481,5 +497,38 @@ public class GameTest {
         assertTrue(eventsFired[3], "Listener ha ricevuto l'evento di cuore perso / breccia");
 
         System.out.println("✔ Il sistema di listener e feedback per il Game Feel risponde in tempo reale a tutti gli eventi");
+    }
+
+    public static void testBlocchiArkanoidRimbalzoSolidoEEstrazione() {
+        Game s = new Game();
+        assertEquals(s.mines.size(), 4, "Inizializzati 4 blocchi Arkanoid nella miniera");
+        Game.Mine block = s.mines.get(0);
+        assertEquals(block.type, "iron_vein", "Tipo blocco Arkanoid: vena di ferro");
+
+        // Rimbalzo solido della sfera sul blocco Arkanoid
+        Game.Ball b = new Game.Ball();
+        b.x = block.x + block.w / 2f;
+        b.y = block.y + block.h + 5f;
+        b.vx = 0f;
+        b.vy = -200f; // Sfera sale verso il blocco
+        b.r = 8f;
+
+        boolean hit = Game.collide(b, block);
+        assertTrue(hit, "Collisione fisica con blocco Arkanoid rilevata");
+        assertTrue(b.vy > 0, "Velocità verticale invertita verso il basso dopo impatto con il blocco");
+        assertTrue(b.y > block.y + block.h, "Sfera separata dal blocco verso l'esterno");
+
+        // Esecuzione step di gioco su blocco: estrazione minerale e wobble
+        s.phase = "wave";
+        s.ball.held = false;
+        s.ball.x = block.x + block.w / 2f;
+        s.ball.y = block.y + block.h + 2f;
+        s.ball.vx = 0f;
+        s.ball.vy = -150f;
+        s.step(0.016f);
+
+        assertTrue(block.wobbleTime > 0f, "Timer di wobble/squash attivato sull'impatto del blocco");
+        assertEquals(s.ball.ore, 1, "Minerale estratto con successo sul rimbalzo");
+        System.out.println("✔ I blocchi Arkanoid garantiscono rimbalzo solido fisico, wobble e raccolta risorse");
     }
 }

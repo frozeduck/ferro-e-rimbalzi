@@ -2,7 +2,21 @@
 
 Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, progettato da zero per essere giocato in **orientamento verticale (portrait)** su smartphone con una sola mano.
 
-**[Scarica la Release v0.9.10 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.10)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
+**[Scarica la Release v0.9.11 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.11)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
+
+---
+
+## Novità v0.9.11: Economia dell'Oro & Blocchi Risorsa Arkanoid
+
+1. **Economia Tattica dell'Oro Separata**:
+   * I mostri e goblin sconfitti rilasciano **Oro tattico** spendibile direttamente sul campo (+1 Oro per mostri base, +2 per koboldi/spettri, +3 per golem/treant).
+   * L'Oro viene impiegato per edificare Mura difensive (3 Oro) e Baliste automatiche o laser (6-7 Oro).
+   * Le risorse estratte e fuse (Ferro, Legname, Gemme) sono ora dedicate al 100% all'**Obiettivo della Rocca e alla Tesoreria del Clan** all'Avamposto, senza più confondere le due valute.
+
+2. **Blocchi Risorsa Arkanoid con Rimbalzo Solido**:
+   * I giacimenti e gli alberi sono ora 4 imponenti **mattoni stile Arkanoid / Breakout** con smusso 3D a vista (luce/ombra), borchie naniche, venature auree e anelli di crescita.
+   * La sfera rimbalza fisicamente in modo solido su ogni faccia del blocco, con deformazione elastica (wobble & compressione squash), hit-flash e particelle di scheggiatura roccia/legno.
+   * Estrazione progressiva ad ogni rimbalzo finché la stiva non è piena.
 
 ---
 
@@ -60,12 +74,12 @@ La piazza centrale dell'Avamposto offre 4 edifici interattivi visitabili toccand
 ## Download e Installazione
 
 Il pacchetto APK firmato pronto all'uso:
-* **APK**: `downloads/ferro-e-rimbalzi-0.9.10-debug.apk`
-* **Checksum**: `downloads/ferro-e-rimbalzi-0.9.10-debug.apk.sha256`
+* **APK**: `downloads/ferro-e-rimbalzi-0.9.11-debug.apk`
+* **Checksum**: `downloads/ferro-e-rimbalzi-0.9.11-debug.apk.sha256`
 
 Per installarlo tramite computer o adb:
 ```bash
-adb install downloads/ferro-e-rimbalzi-0.9.10-debug.apk
+adb install downloads/ferro-e-rimbalzi-0.9.11-debug.apk
 ```
 
 ---
@@ -75,7 +89,7 @@ adb install downloads/ferro-e-rimbalzi-0.9.10-debug.apk
 Tutto il ciclo di vita è automatizzato da Gradle e da script locali:
 
 ```bash
-# Esegue i 14 test unitari, compila l'APK e verifica l'integrità
+# Esegue i 15 test unitari, compila l'APK e verifica l'integrità
 ./scripts/build-apk.sh
 
 # Verifica di conformità (classes.dex, zero web, zero internet)
@@ -94,13 +108,13 @@ android/
 │   │   └── AudioHelper.java     # Sintesi sonora procedurale polifonica con AudioTrack
 │   ├── src/main/res/            # Risorse, colori e icona pixel art
 │   └── src/main/AndroidManifest.xml
-downloads/                       # APK v0.9.10 compilato e sha256
+downloads/                       # APK v0.9.11 compilato e sha256
 scripts/
 ├── build-apk.sh                 # Script di test e compilazione Gradle
 ├── check-apk.py                 # Validatore di integrità dell'APK
 └── generate_sprites.py          # Generatore True Pixel Art 16-bit
 tests/
-└── GameTest.java                # 14 test unitari sulle regole del gioco e game feel
+└── GameTest.java                # 15 test unitari sulle regole del gioco, economia e blocchi Arkanoid
 .agents/skills/                  # Catalogo portable awesome-gamedev-agent-skills + router
 ```
 

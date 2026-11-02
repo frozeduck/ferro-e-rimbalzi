@@ -44,8 +44,17 @@ public class Game {
 
     public static class Mine {
         public float x, y, w, h;
+        public String type; // "iron_vein", "ancient_tree", "crystal_cluster"
+        public float wobbleTime = 0f;
+        public int hits = 0;
+
         public Mine(float x, float y, float w, float h) {
+            this(x, y, w, h, "iron_vein");
+        }
+
+        public Mine(float x, float y, float w, float h, String type) {
             this.x = x; this.y = y; this.w = w; this.h = h;
+            this.type = type;
         }
     }
 
@@ -142,7 +151,8 @@ public class Game {
     public int maxWaves = 5;
     public float time = 0f;
     public float duration = 40f;
-    public int iron = 6;
+    public int gold = 8; // Oro tattico di spedizione: ottenuto uccidendo mostri, speso per mura e baliste
+    public int iron = 0; // Legacy compatibilità
     public int delivered = 0;
     public int target = 14;
     public int hp = 6;
@@ -185,16 +195,21 @@ public class Game {
         mushrooms.clear();
         prisms.clear();
 
+        float blockW = 114f;
+        float blockH = 44f;
+        float blockY = topInset + 86f;
+        float[] blockXs = { 21f, 149f, 277f, 405f };
+
         if ("crystal_cave".equals(selectedBiome)) {
             // Banco del Tagliapietre Runico e Cassaforte delle Gemme
             buildings.add(new Building("gemcutter", "gemcutter", 35f, 400f, 120f, 80f));
             buildings.add(new Building("crystal_vault", "crystal_vault", 385f, 400f, 120f, 80f));
             buildings.add(new Building("wall0", "crystal_wall", 395f, 260f, 110f, 24f));
 
-            // 3 Giacimenti di Cristallo Puro (Mithril e Gemme Runiche)
-            mines.add(new Mine(35f, topInset + 95f, 130f, 50f));
-            mines.add(new Mine(205f, topInset + 80f, 130f, 50f));
-            mines.add(new Mine(375f, topInset + 95f, 130f, 50f));
+            // 4 Blocchi Arkanoid di Cristallo Puro (Mithril e Gemme Runiche)
+            for (float bx : blockXs) {
+                mines.add(new Mine(bx, blockY, blockW, blockH, "crystal_cluster"));
+            }
 
             // 2 Prismi di Risonanza Cristallina (Gimmick Multiball / Sdoppiamento Sfera)
             prisms.add(new Prism(115f, 260f, 46f, 46f));
@@ -205,10 +220,10 @@ public class Game {
             buildings.add(new Building("depot", "depot", 385f, 400f, 120f, 80f));
             buildings.add(new Building("wall0", "wood_wall", 395f, 260f, 110f, 24f));
 
-            // 3 Ceppi di Alberi Antichi per raccolta legname
-            mines.add(new Mine(35f, topInset + 95f, 130f, 50f));
-            mines.add(new Mine(205f, topInset + 80f, 130f, 50f));
-            mines.add(new Mine(375f, topInset + 95f, 130f, 50f));
+            // 4 Blocchi Arkanoid di Quercia Antica per raccolta legname
+            for (float bx : blockXs) {
+                mines.add(new Mine(bx, blockY, blockW, blockH, "ancient_tree"));
+            }
 
             // Funghi elastici bouncers
             mushrooms.add(new Mushroom(115f, 260f, 44f, 44f));
@@ -219,10 +234,10 @@ public class Game {
             buildings.add(new Building("depot", "depot", 385f, 400f, 120f, 80f));
             buildings.add(new Building("wall0", "wall", 395f, 260f, 110f, 24f));
 
-            // 3 Giacimenti nel settore minerario superiore
-            mines.add(new Mine(35f, topInset + 95f, 130f, 50f));
-            mines.add(new Mine(205f, topInset + 80f, 130f, 50f));
-            mines.add(new Mine(375f, topInset + 95f, 130f, 50f));
+            // 4 Blocchi Arkanoid di Filone di Ferro con rimbalzo solido e venature
+            for (float bx : blockXs) {
+                mines.add(new Mine(bx, blockY, blockW, blockH, "iron_vein"));
+            }
         }
     }
 
@@ -241,7 +256,8 @@ public class Game {
         this.capacity = 4 + clanUpgradeCapacity;
         this.damage = 1 + clanUpgradeDamage;
         this.paddleWidth = 110f;
-        this.iron = 6;
+        this.gold = 8;
+        this.iron = 0;
 
         // Applicazione benedizione della Taverna
         if ("heart".equals(clanBuff)) {
@@ -249,10 +265,10 @@ public class Game {
             this.hp = this.maxHp;
         } else if ("speed".equals(clanBuff)) {
             this.paddleWidth += 25f;
-        } else if ("iron_start".equals(clanBuff)) {
-            this.iron += 3;
+        } else if ("iron_start".equals(clanBuff) || "gold_start".equals(clanBuff)) {
+            this.gold += 4;
         } else if ("gem_glow".equals(clanBuff)) {
-            this.iron += 2;
+            this.gold += 2;
         }
         this.clanBuff = ""; // Consumata per questa spedizione
 
@@ -508,9 +524,9 @@ public class Game {
             return;
         }
         phase = "upgrade";
-        iron += 2;
+        gold += 4;
         xp += 2;
-        event("Ondata respinta! +2 ferro di recupero", 270f, 480f, 0xFFE6BA76);
+        event("Ondata respinta! +4 Oro di ricompensa", 270f, 480f, 0xFFFBBF24);
     }
 
     public boolean chooseUpgrade(String type) {
@@ -554,7 +570,7 @@ public class Game {
         boolean isForest = "forest_wood".equals(selectedBiome);
         boolean isCrystal = "crystal_cave".equals(selectedBiome);
         int cost = isWall ? COST_WALL : ("turret".equals(type) || "laser_turret".equals(type)) ? (isCrystal ? 7 : (isForest ? 6 : COST_TURRET)) : -1;
-        if (cost < 0 || iron < cost || buildings.size() >= 12) return false;
+        if (cost < 0 || gold < cost || buildings.size() >= 12) return false;
 
         float rw = isWall ? 120f : 50f;
         float rh = isWall ? 22f : 50f;
@@ -562,7 +578,7 @@ public class Game {
         float ry = Math.round((y - rh / 2f) / 16f) * 16f;
 
         if (!canPlace(rx, ry, rw, rh, null)) return false;
-        iron -= cost;
+        gold -= cost;
         Building b = new Building();
         b.id = "built" + (nextId++);
         b.type = type;
@@ -623,7 +639,6 @@ public class Game {
         }
         if (("depot".equals(type) || "crystal_vault".equals(type)) && ball.metal > 0) {
             int n = ball.metal;
-            iron += n;
             delivered += n;
             ball.metal = 0;
             if (isCrystal) {
@@ -637,6 +652,12 @@ public class Game {
             return true;
         }
         return false;
+    }
+
+    public static int getGoldDrop(String type) {
+        if ("golem".equals(type) || "treant".equals(type)) return 3;
+        if ("thief".equals(type) || "spectre".equals(type)) return 2;
+        return 1;
     }
 
     public void hitEnemy(Enemy e) {
@@ -659,7 +680,9 @@ public class Game {
         if (killed) {
             kills++;
             xp++;
-            event("Distrutto", e.x, e.y, 0xFF93CBB6);
+            int drop = getGoldDrop(e.type);
+            gold += drop;
+            event("+" + drop + " Oro", e.x, e.y, 0xFFFBBF24);
         } else {
             event("−" + dmg, e.x, e.y, 0xFFF8E5C7);
         }
@@ -702,7 +725,7 @@ public class Game {
     }
 
     public static boolean collide(Ball ball, Mine m) {
-        return collide(ball, m.x, m.y, m.w, m.h, false);
+        return collide(ball, m.x, m.y, m.w, m.h, true);
     }
 
     public static boolean collide(Ball ball, Building b, boolean solid) {
@@ -774,13 +797,21 @@ public class Game {
                 }
             }
 
-            // Miniere
+            // Miniere (Blocchi risorsa stile Arkanoid con rimbalzo solido)
             for (int i = 0; i < mines.size(); i++) {
                 Mine m = mines.get(i);
-                if (collide(b, m) && elapsed - hits.getOrDefault("mine" + i, -10f) > 0.32f) {
-                    hits.put("mine" + i, elapsed);
-                    interact("mine");
-                    if (listener != null) listener.onMineHit(m, i);
+                if (collide(b, m)) {
+                    if (elapsed - hits.getOrDefault("mine" + i, -10f) > 0.18f) {
+                        hits.put("mine" + i, elapsed);
+                        m.wobbleTime = 0.24f;
+                        m.hits++;
+                        if (cargo() < capacity) {
+                            interact("mine");
+                        } else {
+                            event("Stiva Piena! Forziere", m.x + m.w / 2f, m.y + m.h + 10f, 0xFFFCD34D);
+                        }
+                        if (listener != null) listener.onMineHit(m, i);
+                    }
                 }
             }
 
@@ -841,6 +872,10 @@ public class Game {
             p.pulseTime = Math.max(0f, p.pulseTime - dt);
         }
 
+        for (Mine m : mines) {
+            m.wobbleTime = Math.max(0f, m.wobbleTime - dt);
+        }
+
         for (Enemy e : enemies) {
             e.hitFlashTime = Math.max(0f, e.hitFlashTime - dt);
             if (e.hp <= 0) continue;
@@ -892,6 +927,9 @@ public class Game {
                 if (killed) {
                     kills++;
                     xp++;
+                    int drop = getGoldDrop(targetEnemy.type);
+                    gold += drop;
+                    event("+" + drop + " Oro", targetEnemy.x, targetEnemy.y, 0xFFFBBF24);
                 }
                 shots.add(new Shot(turret.x + 25f, turret.y + 25f, targetEnemy.x + 21f, targetEnemy.y + 16f, isLaser ? 0.3f : 0.2f));
                 turret.cooldown = isLaser ? 1.3f : 1.6f;

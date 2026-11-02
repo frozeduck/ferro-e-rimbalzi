@@ -436,6 +436,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             public void onEnemyHit(Game.Enemy e, int dmg, boolean killed) {
                 if (killed) {
                     AudioHelper.playGoblinHit();
+                    AudioHelper.playCoins();
                     vibrateHeavy();
                     addTrauma(0.35f);
                     triggerHitStop(0.045f);
@@ -443,6 +444,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                             ("golem".equals(e.type) ? 0xFF67E8F9 :
                             ("spider".equals(e.type) ? 0xFF84CC16 : 0xFF22C55E));
                     spawnParticles(e.x + e.w / 2f, e.y + e.h / 2f, 22, bloodColor, 0);
+                    spawnParticles(e.x + e.w / 2f, e.y + e.h / 2f, 10, 0xFFFBBF24, 0);
                 } else {
                     vibrateLight();
                     addTrauma(0.12f);
@@ -1395,25 +1397,110 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private void drawOreVein(Canvas canvas, Game.Mine m, int index) {
         boolean isCrystal = "crystal_cave".equals(game.selectedBiome);
         boolean isForest = "forest_wood".equals(game.selectedBiome);
+
+        float hitDt = game.elapsed - game.hits.getOrDefault("mine" + index, -10f);
+        boolean isHit = hitDt >= 0f && hitDt < 0.22f;
+        float wobbleProg = m.wobbleTime > 0f ? (m.wobbleTime / 0.24f) : (isHit ? (1f - hitDt / 0.22f) : 0f);
+
+        canvas.save();
+        float cx = m.x + m.w / 2f;
+        float cy = m.y + m.h / 2f;
+
+        if (wobbleProg > 0f) {
+            float squashX = 1f + (float) Math.sin(wobbleProg * Math.PI * 3.0) * 0.08f * wobbleProg;
+            float squashY = 1f - (float) Math.sin(wobbleProg * Math.PI * 3.0) * 0.12f * wobbleProg;
+            canvas.scale(squashX, squashY, cx, cy);
+        }
+
+        // 1. Chassis esterno blocco Arkanoid (Granito nanico / Corteccia dura / Ossidiana)
+        tempRect.set(m.x, m.y, m.x + m.w, m.y + m.h);
+        paintFill.setStyle(Paint.Style.FILL);
+        paintFill.setColor(isCrystal ? 0xFF0B192C : (isForest ? 0xFF2A150A : 0xFF1C1917));
+        canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+
+        // 2. Letto minerario incassato
+        float inset = 3.5f;
+        tempRect.set(m.x + inset, m.y + inset, m.x + m.w - inset, m.y + m.h - inset);
+        paintFill.setColor(isCrystal ? 0xFF1E1B4B : (isForest ? 0xFF451A03 : 0xFF292524));
+        canvas.drawRoundRect(tempRect, 4f, 4f, paintFill);
+
+        // 3. Venature e texture tematiche
+        paintStroke.setStyle(Paint.Style.STROKE);
+        if (isCrystal) {
+            // Sfaccettature cristalline prismatiche
+            paintStroke.setStrokeWidth(2f);
+            paintStroke.setColor(0xFF06B6D4);
+            canvas.drawLine(m.x + 10f, m.y + m.h - 8f, m.x + 28f, m.y + 8f, paintStroke);
+            canvas.drawLine(m.x + m.w - 10f, m.y + m.h - 8f, m.x + m.w - 28f, m.y + 8f, paintStroke);
+            paintStroke.setColor(0xFF67E8F9);
+            canvas.drawLine(m.x + 28f, m.y + 8f, m.x + 42f, m.y + 22f, paintStroke);
+            canvas.drawLine(m.x + m.w - 28f, m.y + 8f, m.x + m.w - 42f, m.y + 22f, paintStroke);
+        } else if (isForest) {
+            // Anelli di crescita del tronco e venature corteccia
+            paintStroke.setStrokeWidth(1.8f);
+            paintStroke.setColor(0xFF78350F);
+            canvas.drawLine(m.x + 8f, m.y + 13f, m.x + m.w - 8f, m.y + 13f, paintStroke);
+            canvas.drawLine(m.x + 8f, m.y + 29f, m.x + m.w - 8f, m.y + 29f, paintStroke);
+            // Germogli / muschio runico
+            paintFill.setStyle(Paint.Style.FILL);
+            paintFill.setColor(0xFF059669);
+            canvas.drawCircle(m.x + 14f, m.y + 9f, 2.5f, paintFill);
+            canvas.drawCircle(m.x + m.w - 14f, m.y + m.h - 9f, 2.8f, paintFill);
+        } else {
+            // Venature di pirite aurea e filoni di ferro
+            paintStroke.setStrokeWidth(2.2f);
+            paintStroke.setColor(0xFFD97706);
+            canvas.drawLine(m.x + 8f, m.y + 16f, m.x + 24f, m.y + 11f, paintStroke);
+            canvas.drawLine(m.x + 24f, m.y + 11f, m.x + 40f, m.y + 24f, paintStroke);
+            canvas.drawLine(m.x + m.w - 40f, m.y + 22f, m.x + m.w - 24f, m.y + 11f, paintStroke);
+            canvas.drawLine(m.x + m.w - 24f, m.y + 11f, m.x + m.w - 8f, m.y + 18f, paintStroke);
+            paintFill.setStyle(Paint.Style.FILL);
+            paintFill.setColor(0xFFFBBF24);
+            canvas.drawCircle(m.x + 24f, m.y + 11f, 2.5f, paintFill);
+            canvas.drawCircle(m.x + m.w - 24f, m.y + 11f, 2.5f, paintFill);
+        }
+
+        // 4. Sprite pixel art centrale
         Bitmap bmp = isCrystal && bmpCrystalMine != null ? bmpCrystalMine :
                 (isForest && bmpTree != null ? bmpTree : bmpMine);
         if (bmp != null) {
-            drawPreservingAspect(canvas, bmp, m.x, m.y, m.w, m.h);
-        } else {
-            tempRect.set(m.x, m.y, m.x + m.w, m.y + m.h);
-            paintFill.setStyle(Paint.Style.FILL);
-            paintFill.setColor(isCrystal ? 0xFF0E344E : (isForest ? 0xFF14532D : 0xFF2D241E));
-            canvas.drawRoundRect(tempRect, 6f, 6f, paintFill);
+            float iconH = m.h - 10f;
+            float iconW = iconH * (bmp.getWidth() / (float) bmp.getHeight());
+            tempRect.set(cx - iconW / 2f, cy - iconH / 2f, cx + iconW / 2f, cy + iconH / 2f);
+            canvas.drawBitmap(bmp, null, tempRect, paintPixel);
         }
 
-        boolean flash = (game.elapsed - game.hits.getOrDefault("mine" + index, -10f)) < 0.18f;
-        if (flash) {
+        // 5. Smusso 3D stile mattone Arkanoid (Luce in alto a sinistra, ombra in basso a destra)
+        paintStroke.setStyle(Paint.Style.STROKE);
+        paintStroke.setStrokeWidth(1.6f);
+        paintStroke.setColor(isCrystal ? 0x90A5F3FC : (isForest ? 0x80FDE68A : 0x80E2E8F0));
+        canvas.drawLine(m.x + 4f, m.y + 2f, m.x + m.w - 4f, m.y + 2f, paintStroke);
+        canvas.drawLine(m.x + 2f, m.y + 4f, m.x + 2f, m.y + m.h - 4f, paintStroke);
+        paintStroke.setColor(0xA0000000);
+        canvas.drawLine(m.x + 4f, m.y + m.h - 2f, m.x + m.w - 4f, m.y + m.h - 2f, paintStroke);
+        canvas.drawLine(m.x + m.w - 2f, m.y + 4f, m.x + m.w - 2f, m.y + m.h - 4f, paintStroke);
+
+        // 6. Borchie / rivetti angolari nanici
+        paintFill.setStyle(Paint.Style.FILL);
+        paintFill.setColor(isCrystal ? 0xFF38BDF8 : (isForest ? 0xFF92400E : 0xFF78716C));
+        float rSize = 3.2f;
+        canvas.drawCircle(m.x + 5f, m.y + 5f, rSize, paintFill);
+        canvas.drawCircle(m.x + m.w - 5f, m.y + 5f, rSize, paintFill);
+        canvas.drawCircle(m.x + 5f, m.y + m.h - 5f, rSize, paintFill);
+        canvas.drawCircle(m.x + m.w - 5f, m.y + m.h - 5f, rSize, paintFill);
+
+        // 7. Hit-Flash all'impatto della sfera (Bordo brillante + sagoma luminosa)
+        if (isHit || wobbleProg > 0.05f) {
             tempRect.set(m.x, m.y, m.x + m.w, m.y + m.h);
             paintStroke.setStyle(Paint.Style.STROKE);
-            paintStroke.setStrokeWidth(3f);
-            paintStroke.setColor(isCrystal ? 0xFF67E8F9 : 0xFFFEF3C7);
+            paintStroke.setStrokeWidth(3.5f);
+            int flashAlpha = (int) (255 * (wobbleProg > 0f ? wobbleProg : (1f - hitDt / 0.22f)));
+            paintStroke.setColor(isCrystal ? Color.argb(flashAlpha, 103, 232, 249) :
+                    (isForest ? Color.argb(flashAlpha, 254, 240, 138) : Color.argb(flashAlpha, 255, 255, 255)));
             canvas.drawRoundRect(tempRect, 6f, 6f, paintStroke);
         }
+
+        canvas.restore();
     }
 
     private void drawBuilding(Canvas canvas, Game.Building b) {
@@ -1877,11 +1964,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         boolean isForest = "forest_wood".equals(game.selectedBiome);
         paintText.setTextAlign(Paint.Align.LEFT);
         paintText.setTextSize(13f);
-        paintText.setColor(isCrystal ? 0xFF67E8F9 : (isForest ? 0xFF34D399 : 0xFFF59E0B));
-        String resLabel = isCrystal ? ("Gemme: " + game.iron) : (isForest ? ("Legno: " + game.iron) : ("Ferro: " + game.iron + " Fe"));
-        canvas.drawText(resLabel, 257f, topY + 22f, paintText);
+        paintText.setColor(0xFFFBBF24);
+        canvas.drawText("Oro: " + game.gold + " G", 257f, topY + 22f, paintText);
         paintText.setColor(isCrystal ? 0xFFA5F3FC : (isForest ? 0xFFA7F3D0 : 0xFF34D399));
-        canvas.drawText("In Cassa: " + game.delivered + "/" + game.target, 257f, topY + 44f, paintText);
+        String targetPrefix = isCrystal ? "Gemme: " : (isForest ? "Legno: " : "Fe: ");
+        canvas.drawText(targetPrefix + game.delivered + "/" + game.target, 257f, topY + 44f, paintText);
 
         // 4. Scheda TEMPO (x=382f..432f)
         int sec = (int) Math.max(0, game.duration - game.time);
@@ -1960,9 +2047,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         } else if ("build".equals(game.phase)) {
             String wallType = isCrystal ? "crystal_wall" : (isForest ? "wood_wall" : "wall");
             boolean selWall = wallType.equals(placingType);
-            boolean canWall = game.iron >= Game.COST_WALL;
+            boolean canWall = game.gold >= Game.COST_WALL;
             drawFantasyButton(canvas, btnWall,
-                    isCrystal ? "+ OSSIDIANA (3 Gemme)" : (isForest ? "+ BARRICATA (3 Legno)" : "+ MURA (3 Fe)"),
+                    isCrystal ? "+ OSSIDIANA (3 Oro)" : (isForest ? "+ BARRICATA (3 Oro)" : "+ MURA (3 Oro)"),
                     selWall ? "▶ POSIZIONA..." : (isCrystal ? "Barricata vulcanica" : (isForest ? "Tronchi appuntiti" : "Mura in pietra")),
                     selWall ? 0xFF047857 : (canWall ? 0xFF065F46 : 0xFF292524),
                     canWall ? 0xFFD1FAE5 : 0xFF78716C);
@@ -1970,9 +2057,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             String turretType = isCrystal ? "laser_turret" : "turret";
             boolean selTurret = turretType.equals(placingType);
             int turretCost = isCrystal ? 7 : (isForest ? 6 : Game.COST_TURRET);
-            boolean canTurret = game.iron >= turretCost;
+            boolean canTurret = game.gold >= turretCost;
             drawFantasyButton(canvas, btnTurret,
-                    isCrystal ? "+ LASER (7 Gemme)" : (isForest ? "+ BALISTA (6 Legno)" : "+ BALISTA (7 Fe)"),
+                    isCrystal ? "+ LASER (7 Oro)" : (isForest ? "+ BALISTA (" + turretCost + " Oro)" : "+ BALISTA (7 Oro)"),
                     selTurret ? "▶ POSIZIONA..." : (isCrystal ? "Lente prismatica" : "Dardi automatici"),
                     selTurret ? 0xFF0891B2 : (canTurret ? 0xFF0E7490 : 0xFF292524),
                     canTurret ? 0xFFA5F3FC : 0xFF78716C);
@@ -2051,9 +2138,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         float stepY = cardTop + 75f;
 
         drawTutorialCard(canvas, 25f, stepY, 0,
-                "1. MINIERA DI FERRO",
-                "Colpisci la roccia viva con la sfera runica per",
-                "estrarre il minerale grezzo (massimo 4 pezzi).");
+                "1. FILONI E ALBERI ARKANOID",
+                "Colpisci i blocchi in alto con la sfera per rimbalzare",
+                "ed estrarre minerale o legname grezzo nella stiva.");
 
         stepY += 140f;
         drawTutorialCard(canvas, 25f, stepY, 1,
@@ -2063,9 +2150,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
         stepY += 140f;
         drawTutorialCard(canvas, 25f, stepY, 2,
-                "3. FORZIERE REALE",
-                "Fai entrare la sfera nel forziere per depositare il",
-                "ferro: compri difese e vinci consegnando 14 Fe!");
+                "3. FORZIERE REALE & ORO",
+                "Deposita il carico per vincere la missione (14 Fe).",
+                "I goblin sconfitti rilasciano ORO per comprare difese!");
 
         stepY += 140f;
         drawTutorialCard(canvas, 25f, stepY, 3,
@@ -2487,7 +2574,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         paintText.setTextSize(13f);
         String currentBuff = game.clanBuff.isEmpty() ? "Nessuna" :
                 ("heart".equals(game.clanBuff) ? "+1 Cuore Extra" :
-                ("speed".equals(game.clanBuff) ? "+25px Scudo & Reattività" : "+3 Ferro di Partenza"));
+                ("speed".equals(game.clanBuff) ? "+25px Scudo & Reattività" : "+4 Oro di Partenza"));
         paintText.setColor(!game.clanBuff.isEmpty() ? 0xFF10B981 : 0xFF94A3B8);
         canvas.drawText("Benedizione attuale: " + currentBuff, Game.W / 2f, 135f, paintText);
 
@@ -2536,7 +2623,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         canvas.drawText("DISTILLATO DEL DRAGO (Costo: 4 Fe)", tempRect.left + 16f, tempRect.top + 34f, paintText);
         paintText.setTextSize(11f);
         paintText.setColor(0xFFD6D3D1);
-        canvas.drawText("+3 Ferro spendibile già presente in cassa alla partenza.", tempRect.left + 16f, tempRect.top + 60f, paintText);
+        canvas.drawText("+4 Oro spendibile già presente all'inizio della spedizione.", tempRect.left + 16f, tempRect.top + 60f, paintText);
         paintText.setColor(canCharge ? 0xFF34D399 : 0xFFEF4444);
         canvas.drawText(canCharge ? "Tocca per bere il distillato" : "Richiede 4 Ferro", tempRect.left + 16f, tempRect.top + 84f, paintText);
 
