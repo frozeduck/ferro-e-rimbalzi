@@ -1,0 +1,8 @@
+{
+  "name": "Ferro e Rimbalzi",
+  "description": "Gioco d'azione, logica e difesa della rocca nanica in stile Arkanoid e Breakout con economia delle risorse, fucina, taverna e biomi procedurali.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

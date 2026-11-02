@@ -1,120 +1,41 @@
-# Ferro e Rimbalzi (Android APK · Verticale · Fantasy Nanico)
+# Ferro e Rimbalzi (React + Vite · Fantasy Nanico)
 
-Gioco d'azione, logica e difesa della rocca nanica nativo per **Android**, progettato da zero per essere giocato in **orientamento verticale (portrait)** su smartphone con una sola mano.
+Gioco d'azione, logica e difesa della rocca nanica riscritta come applicazione web moderna in **React + TypeScript + Vite + Tailwind CSS**, ottimizzata per gameplay verticale (portrait) e giocabile sia su mobile che su desktop.
 
-**[Scarica la Release v0.9.11 su GitHub](https://github.com/frozeduck/ferro-e-rimbalzi/releases/tag/v0.9.11)** · [Codice sorgente](https://github.com/frozeduck/ferro-e-rimbalzi)
-
----
-
-## Novità v0.9.11: Economia dell'Oro & Blocchi Risorsa Arkanoid
-
-1. **Economia Tattica dell'Oro Separata**:
-   * I mostri e goblin sconfitti rilasciano **Oro tattico** spendibile direttamente sul campo (+1 Oro per mostri base, +2 per koboldi/spettri, +3 per golem/treant).
-   * L'Oro viene impiegato per edificare Mura difensive (3 Oro) e Baliste automatiche o laser (6-7 Oro).
-   * Le risorse estratte e fuse (Ferro, Legname, Gemme) sono ora dedicate al 100% all'**Obiettivo della Rocca e alla Tesoreria del Clan** all'Avamposto, senza più confondere le due valute.
-
-2. **Blocchi Risorsa Arkanoid con Rimbalzo Solido**:
-   * I giacimenti e gli alberi sono ora 4 imponenti **mattoni stile Arkanoid / Breakout** con smusso 3D a vista (luce/ombra), borchie naniche, venature auree e anelli di crescita.
-   * La sfera rimbalza fisicamente in modo solido su ogni faccia del blocco, con deformazione elastica (wobble & compressione squash), hit-flash e particelle di scheggiatura roccia/legno.
-   * Estrazione progressiva ad ogni rimbalzo finché la stiva non è piena.
+Basato sul progetto originale nativo di [frozeduck/ferro-e-rimbalzi](https://github.com/frozeduck/ferro-e-rimbalzi).
 
 ---
 
-## Panoramica del Gioco (Ambientazione Fantasy Nanico & Hub Interattivo)
+## Caratteristiche Principali
 
-*Ferro e Rimbalzi* unisce il dinamismo del Breakout / flipper con un'economia tattica di spedizioni, estrazione mineraria, segheria silvana e difesa dall'assedio di mostri:
+1. **Roccaforte dei Nani (Hub Interattivo Completo)**:
+   * **Grande Fucina dei Fabbri**: forgia miglioramenti permanenti validi per tutte le spedizioni (Tempra dello Scudo per cuori vitali, Stiva Runicata per la capienza della sfera, Incudine d'Acciaio per il danno base).
+   * **Taverna della Botte Bollente**: bevi un boccale di Idromele della Roccia, Birra di Fungo Silvano o Distillato del Drago per ottenere una benedizione/buff temporaneo per la prossima spedizione.
+   * **Tesoreria Reale & Annali del Clan**: consulta il bilancio del regno (Ferro, Legname e Gemme) e l'albo storico dei record (spedizioni vinte, minerali estratti, legname tagliato, gemme pure sfaccettate, mostri sconfitti).
+   * **Portale delle Gallerie**: consulta la mappa tattica dei biomi, seleziona e sblocca la destinazione (Miniera di Ferro, Bosco dei Nani o Caverna dei Cristalli) e avvia la spedizione.
+   * **Salvataggio Persistente**: tutte le scorte, i potenziamenti del clan, i buff e i territori sbloccati sono salvati automaticamente con `localStorage`.
 
-### 1. Roccaforte dei Nani (Hub Interattivo Completo)
-La piazza centrale dell'Avamposto offre 4 edifici interattivi visitabili toccandoli:
-* **Grande Fucina dei Fabbri**: forgia miglioramenti permanenti validi per tutte le partite future (Tempra dello Scudo per cuori vitali, Stiva Runicata per la capienza della sfera, Incudine d'Acciaio per il danno base).
-* **Taverna della Botte Bollente**: bevi un boccale di Idromele della Roccia, Birra di Fungo Silvano o Distillato del Drago per ottenere una benedizione/buff temporaneo per la prossima spedizione.
-* **Camera del Tesoro & Annali Reali**: consulta il bilancio del regno (Ferro, Legname e Gemme) e l'albo storico dei record (spedizioni vinte, minerali estratti, legname tagliato, gemme pure sfaccettate, mostri sconfitti).
-* **Portale delle Gallerie**: consulta la mappa tattica dei biomi, seleziona la destinazione (Miniera di Ferro, Bosco dei Nani o Caverna dei Cristalli) e avvia la spedizione sui binari.
-* **Salvataggio Persistente**: tutte le scorte, i potenziamenti del clan, i buff e i territori sbloccati sono salvati automaticamente con `SharedPreferences`.
+2. **Spedizione & Difesa della Miniera (Breakout Fantasy)**:
+   * **Fase Cantiere (Build Phase)**: erigi Mura in pietra, Barricate in legno o Mura in ossidiana (3 Oro), e Baliste o Torrette Laser (6-7 Oro) spostabili sulla griglia di scalpellatura nanica.
+   * **Fase Ondata (Wave Phase)**: mira e lancia la sfera magica runica, difendi la palizzata nanica respingendo le ondate di goblin, ladri koboldi, ragni silvani, treant, golem e spettri di cristallo.
+   * **Blocchi Risorsa Arkanoid con Rimbalzo Solido**: giacimenti e ceppi d'albero con smusso 3D a vista, deformazione elastica, hit-flash e rilascio progressivo di risorse nella stiva della sfera.
+   * **Forgiatura & Consegna**: attraversa la Fucina aperta (o Segheria / Banco Tagliapietre) per fondere il grezzo in risorse raffinate, poi deposita al Forziere Reale.
+   * **Prismi & Multiball**: risonanza cristallina che sdoppia la sfera in un clone ausiliario.
+   * **Talenti tra le Ondate**: seleziona artefatti nanici (Bisaccia rinforzata, Scudo maggiorato, Incanto runico).
 
-### 2. Bioma Miniera di Ferro (Miniera Superiore)
-* 3 giacimenti di roccia viva per estrarre minerale di ferro.
-* **Grande Fucina Nanica**: fonde il minerale in ferro raffinato spendibile.
-* **Forziere del Regno**: deposita i lingotti per finanziare la rocca.
-* Invasori: Goblin guerrieri e Ladri Koboldi.
-
-### 3. Bioma Bosco dei Nani (Fase 2)
-* Sbloccabile con 14 Ferro dalle riserve del Clan.
-* **Ceppi di Alberi Antichi**: abbatti la corteccia per raccogliere tronchi di legname pregiato.
-* **Segheria Meccanica Runica**: lama dentata d'acciaio rotante che taglia i tronchi in assi rinforzate.
-* **Funghi Elastici (Bouncers)**: respingenti naturali fluorescenti che imprimono una vigorosa spinta elastica (+10% velocita) e rilasciano spore luminescenti.
-* **Barricate di Tronchi & Baliste Silvane**: difese veloci da erigere per 3 Legno.
-* **Ragni delle Radici & Bestie Silvane**: nemici agili con movimento serpeggiante sinusoidale.
-
-### 4. Bioma Caverna dei Cristalli (Fase 3)
-* Sbloccabile con 18 Ferro + 14 Legname dalle riserve del Clan.
-* **Giacimenti di Cristallo Puro**: estrai cristalli grezzi di quarzo e mithril.
-* **Banco del Tagliapietre Runico**: rifinisce e sfaccetta i cristalli in gemme scintillanti.
-* **Cassaforte delle Gemme**: forziere d'ossidiana rinforzato per custodire il tesoro runico.
-* **Prismi di Risonanza Cristallina (Gimmick Multiball)**: colpendo i prismi la sfera si sdoppia! La seconda sfera clone aiuta a minare ed eliminare i nemici; se il clone cade si dissolve senza perdere cuori, e se la principale cade il clone la salva!
-* **Barricate d'Ossidiana & Torrette Laser a Prisma**: difesa ad alta energia focalizzata da lenti prismatiche (320px di raggio, 2 danni).
-* **Golem di Quarzo & Spettri di Cristallo**: nemici corazzati lenti ed entita eteree fluttuanti a traiettoria armonica.
+3. **Sintesi Sonora Procedurale Polifonica**:
+   * Motore audio procedurale in tempo reale tramite **Web Audio API** senza campioni audio esterni (deflessione dello scudo accordata in frequenza, rimbalzo pareti, molla boing funghi, risonanza arpeggiata dei cristalli, dardo balista, raggio laser, segheria, fanfara di vittoria).
+   * Feedback aptico tramite `navigator.vibrate` per dispositivi compatibili.
+   * Controlli da tastiera (Spazio per lanciare, Freccia Sinistra / Destra o A / D per muovere lo scudo, P per mettere in pausa).
 
 ---
 
-## Caratteristiche Tecniche
-
-* **100% Nativo Android**: Sviluppato in Java standard con `SurfaceView` e rendering hardware su `Canvas` a ~60 FPS. Nessun wrapper web, nessun browser, nessun framework pesante.
-* **Layout Verticale Nativo (Portrait 9:16)**: Ottimizzato per display mobile con coordinate virtuali 540x960 e letterboxing adattivo ad alta precisione.
-* **Safe Area & Display Cutout**: Compatibilita totale con fotocamere punch-hole e schermi ultra-allungati (Samsung Galaxy Z Flip 7, 22:9).
-* **Game Feel & "Juice" Dinamico**: Hit-stop freeze frame su impatti critici (45-70ms), Squash & Stretch reattivo con ritorno elastico, rinculo fisico dello scudo nanico (paddle recoil), flash silhouette bianco sui colpi nemici e damage vignette rossa allarme breccia.
-* **Mira Runica Predittiva**: Tracciamento predittivo con raycasting nanico che calcola la prima riflessione della traiettoria contro le pareti di roccia.
-* **Grafica Pixel Art Fantasy Autentica (16-bit)**: 0% SVG vettoriale generico, palette 32 colori scalata con Nearest Neighbor pixel-per-pixel, animazioni procedurali (lama segheria rotante, scintillio tagliapietre, respiro fiamma della fucina).
-* **Audio Procedurale Polifonico**: Sintesi sonora in tempo reale tramite `AudioTrack` multi-thread: deflessione scudo accordata per offset di battuta, rimbalzo secco pareti, molla boing funghi, risonanza arpeggiata dei cristalli, dardo balista, raggio laser, segheria e fanfara solenne di vittoria.
-* **Feedback Aptico Android (Vibrator)**: Vibrazioni tattili calibrate per tick leggeri su racchetta e UI, impulsi medi su funghi/prismi, scosse pesanti su nemici abbattuti e doppio impulso d'allarme su breccia.
-* **100% Offline e Sicuro**: Nessun permesso di rete (`android.permission.INTERNET`) richiesto nel Manifest.
-
----
-
-## Download e Installazione
-
-Il pacchetto APK firmato pronto all'uso:
-* **APK**: `downloads/ferro-e-rimbalzi-0.9.11-debug.apk`
-* **Checksum**: `downloads/ferro-e-rimbalzi-0.9.11-debug.apk.sha256`
-
-Per installarlo tramite computer o adb:
-```bash
-adb install downloads/ferro-e-rimbalzi-0.9.11-debug.apk
-```
-
----
-
-## Compilazione e Test
-
-Tutto il ciclo di vita è automatizzato da Gradle e da script locali:
+## Sviluppo ed Esecuzione
 
 ```bash
-# Esegue i 15 test unitari, compila l'APK e verifica l'integrità
-./scripts/build-apk.sh
+# Avvia il server di sviluppo su porta 3000
+npm run dev
 
-# Verifica di conformità (classes.dex, zero web, zero internet)
-python3 scripts/check-apk.py
+# Compila l'applicazione per la produzione
+npm run build
 ```
-
-### Struttura del progetto
-
-```
-android/
-├── app/
-│   ├── src/main/java/eu/sabotino/ferrorimbalzi/
-│   │   ├── MainActivity.java    # Activity immersiva verticale a schermo intero
-│   │   ├── GameView.java        # SurfaceView a 60 FPS con comandi touch per smartphone
-│   │   ├── Game.java            # Modello logico e fisico dell'arena verticale
-│   │   └── AudioHelper.java     # Sintesi sonora procedurale polifonica con AudioTrack
-│   ├── src/main/res/            # Risorse, colori e icona pixel art
-│   └── src/main/AndroidManifest.xml
-downloads/                       # APK v0.9.11 compilato e sha256
-scripts/
-├── build-apk.sh                 # Script di test e compilazione Gradle
-├── check-apk.py                 # Validatore di integrità dell'APK
-└── generate_sprites.py          # Generatore True Pixel Art 16-bit
-tests/
-└── GameTest.java                # 15 test unitari sulle regole del gioco, economia e blocchi Arkanoid
-.agents/skills/                  # Catalogo portable awesome-gamedev-agent-skills + router
-```
-

@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: manipulation;
+  }
+}
+
+.pixel-art {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.font-dwarven {
+  font-family: 'Cinzel', serif;
+}
+
+.font-rune {
+  font-family: 'MedievalSharp', cursive;
+}
+
+.font-arcade {
+  font-family: 'VT323', monospace;
+}
